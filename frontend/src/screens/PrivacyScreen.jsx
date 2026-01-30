@@ -57,7 +57,7 @@ const PrivacyScreen = ({ navigation }) => {
 
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={() => navigation.navigate('MainTabs')} // Final step, go to main app
+                        onPress={() => navigation.navigate('Auth')} // Final step, go to auth
                     >
                         <Text style={styles.buttonText}>Let's Start</Text>
                         <Ionicons name="arrow-forward" size={20} color={colors.white} style={{ marginLeft: 8 }} />

@@ -60,7 +60,11 @@ const AuthScreen = ({ navigation }) => {
             if (isLogin) {
                 // LOGIN FLOW: Direct Firebase Login (No OTP)
                 await signInWithEmailAndPassword(auth, email, password);
-                navigation.replace("MainTabs");
+                // navigation.replace("MainTabs");
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'MainTabs' }],
+                });
             } else {
                 // SIGNUP FLOW: Send OTP first
                 console.log("Sending OTP to:", email);

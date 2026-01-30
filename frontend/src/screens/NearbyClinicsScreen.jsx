@@ -34,9 +34,11 @@ const NearbyClinicsScreen = ({ navigation }) => {
 
     const fetchNearbyClinics = async (lat, lng) => {
         const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+        // If no Google Key, use OpenStreetMap (Overpass API) for real data
         if (!apiKey) {
-            console.warn("No Google Maps API Key found, using dummy data.");
-            generateNearbyClinics(lat, lng);
+            console.log("No Google Maps API Key found, fetching from OpenStreetMap...");
+            fetchNearbyClinicsOSM(lat, lng);
             return;
         }
 
@@ -73,11 +75,69 @@ const NearbyClinicsScreen = ({ navigation }) => {
 
                 setClinics(realClinics.slice(0, 10)); // Limit to 10
             } else {
-                console.warn("Google Places API returned no results or error:", data.status);
-                generateNearbyClinics(lat, lng);
+                console.warn("Google Places API error:", data.status, data.error_message);
+                // Fallback to OSM
+                fetchNearbyClinicsOSM(lat, lng);
             }
         } catch (error) {
             console.error("Error fetching places:", error);
+            fetchNearbyClinicsOSM(lat, lng);
+        }
+    };
+
+    const fetchNearbyClinicsOSM = async (lat, lng) => {
+        try {
+            // Overpass API Query: Find nodes with amenity=hospital or clinic within 5km (5000m)
+            const query = `
+                [out:json];
+                (
+                  node["amenity"="hospital"](around:5000,${lat},${lng});
+                  node["amenity"="clinic"](around:5000,${lat},${lng});
+                );
+                out body;
+                >;
+                out skel qt;
+            `;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+            console.log("Fetching from Overpass API...");
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data && data.elements && data.elements.length > 0) {
+                const osmClinics = data.elements
+                    .filter(el => el.tags && el.tags.name) // Only those with names
+                    .map((el) => {
+                        const distKm = getDistanceFromLatLonInKm(lat, lng, el.lat, el.lon);
+                        return {
+                            id: el.id.toString(),
+                            name: el.tags.name,
+                            status: "OPEN", // OSM doesn't always have opening hours, assuming open
+                            statusColor: "#4CAF50",
+                            statusBg: "#E8F5E9",
+                            distance: `${distKm.toFixed(1)} km`,
+                            time: `${Math.ceil(distKm * 5)} mins`,
+                            address: el.tags['addr:street'] ? `${el.tags['addr:housenumber'] || ''} ${el.tags['addr:street']}` : "Address not listed",
+                            phone: el.tags['contact:phone'] || el.tags.phone || "Unavailable",
+                            coordinates: {
+                                latitude: el.lat,
+                                longitude: el.lon
+                            },
+                            type: el.tags.amenity === 'hospital' ? "Hospital" : "Clinic",
+                            rating: 4.5 // Dummy rating
+                        };
+                    });
+
+                // Sort by distance
+                osmClinics.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+                setClinics(osmClinics.slice(0, 15));
+            } else {
+                console.warn("No results from Overpass, using fallback generator.");
+                generateNearbyClinics(lat, lng);
+            }
+
+        } catch (error) {
+            console.error("OSM Fetch Error:", error);
             generateNearbyClinics(lat, lng);
         }
     };

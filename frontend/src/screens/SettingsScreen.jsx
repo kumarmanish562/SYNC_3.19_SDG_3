@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { auth } from '../services/firebaseConfig';
+import { signOut } from 'firebase/auth';
 
 const SettingsScreen = ({ navigation }) => {
 
@@ -35,6 +37,19 @@ const SettingsScreen = ({ navigation }) => {
             )}
         </TouchableOpacity>
     );
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            // Reset navigation queue and go to Auth
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Auth' }],
+            });
+        } catch (error) {
+            console.error("Logout Error:", error);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -94,7 +109,7 @@ const SettingsScreen = ({ navigation }) => {
                 />
 
                 {/* Logout Button */}
-                <TouchableOpacity style={styles.logoutButton}>
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Ionicons name="log-out-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
                     <Text style={styles.logoutText}>Logout</Text>
                 </TouchableOpacity>

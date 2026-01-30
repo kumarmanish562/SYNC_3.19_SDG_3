@@ -49,7 +49,7 @@ const WelcomeScreen = ({ navigation }) => {
 
                     <TouchableOpacity
                         style={styles.skipButton}
-                        onPress={() => navigation.navigate('MainTabs')}
+                        onPress={() => navigation.navigate('Auth')}
                     >
                         <Text style={styles.skipText}>Skip</Text>
                     </TouchableOpacity>

@@ -26,8 +26,34 @@ const RecordCoughScreen = ({ navigation }) => {
         return () => clearInterval(interval);
     }, [isRecording]);
 
+    // Cleanup recording when leaving screen
+    useEffect(() => {
+        return () => {
+            if (recording) {
+                recording.stopAndUnloadAsync();
+            }
+        };
+    }, [recording]);
+
+    const cleanupRecording = async () => {
+        if (recording) {
+            try {
+                await recording.stopAndUnloadAsync();
+            } catch (error) {
+                console.log("Error cleaning up recording:", error);
+            }
+            setRecording(null);
+            setIsRecording(false);
+        }
+    };
+
     const startRecording = async () => {
         try {
+            // Ensure no previous recording exists
+            if (recording) {
+                await cleanupRecording();
+            }
+
             const permission = await Audio.requestPermissionsAsync();
             if (permission.status !== 'granted') {
                 Alert.alert("Permission Denied", "Microphone access is required.");
@@ -39,29 +65,40 @@ const RecordCoughScreen = ({ navigation }) => {
                 playsInSilentModeIOS: true,
             });
 
-            const { recording } = await Audio.Recording.createAsync(
+            const { recording: newRecording } = await Audio.Recording.createAsync(
                 Audio.RecordingOptionsPresets.HIGH_QUALITY
             );
 
-            setRecording(recording);
+            setRecording(newRecording);
             setIsRecording(true);
         } catch (err) {
             console.error('Failed to start recording', err);
+            // If we hit the specific "Only one Recording" error, try to cleanup and maybe user has to tap again
+            if (err.message && err.message.includes('Only one Recording')) {
+                await cleanupRecording();
+                Alert.alert("Error", "Previous recording session was not closed. Please try again.");
+            }
         }
     };
 
     const stopRecording = async () => {
         if (!recording) return;
 
-        setIsRecording(false);
-        await recording.stopAndUnloadAsync();
-        const uri = recording.getURI();
-        setRecording(null);
+        try {
+            setIsRecording(false);
+            await recording.stopAndUnloadAsync();
+            const uri = recording.getURI();
 
-        console.log('Recording stored at', uri);
+            // Clean local state but keep URI for navigation
+            setRecording(null);
 
-        // Navigate to Analyzing Screen with URI
-        navigation.navigate('Analyzing', { audioUri: uri });
+            console.log('Recording stored at', uri);
+            // Navigate to Analyzing Screen with URI
+            navigation.navigate('Analyzing', { audioUri: uri });
+
+        } catch (error) {
+            console.error("Failed to stop recording", error);
+        }
     };
 
     const pickAudio = async () => {

@@ -52,7 +52,11 @@ const OtpVerificationScreen = ({ route, navigation }) => {
                 if (isLogin) {
                     // Login
                     await signInWithEmailAndPassword(auth, email, password);
-                    navigation.replace("MainTabs");
+                    // navigation.replace("MainTabs");
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'MainTabs' }],
+                    });
                 } else {
                     // Signup
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -72,7 +76,13 @@ const OtpVerificationScreen = ({ route, navigation }) => {
                     });
 
                     Alert.alert("Success", "Account Verified & Created!", [
-                        { text: "Go Home", onPress: () => navigation.replace("MainTabs") }
+                        {
+                            text: "Go Home",
+                            onPress: () => navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'MainTabs' }],
+                            })
+                        }
                     ]);
                 }
             } else {
