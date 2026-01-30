@@ -1,57 +1,52 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, RefreshControl } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { useFocusEffect } from '@react-navigation/native';
-import { auth } from '../services/firebaseConfig';
-import { fetchHistory } from '../services/api';
-
-const { width } = Dimensions.get('window');
+import { auth, db } from '../services/firebaseConfig';
+import { ref, onValue } from 'firebase/database';
+import { useTranslation } from 'react-i18next';
 
 const HomeScreen = ({ navigation }) => {
+    const { t } = useTranslation();
     const [userName, setUserName] = useState('User');
     const [recentActivity, setRecentActivity] = useState([]);
-    const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const loadData = async () => {
-        // 1. Get User Details
-        if (auth.currentUser) {
-            setUserName(auth.currentUser.displayName || auth.currentUser.email.split('@')[0] || 'User');
+    useEffect(() => {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+            setUserName(currentUser.displayName || currentUser.email.split('@')[0] || 'User');
 
-            // 2. Fetch History
-            const res = await fetchHistory(auth.currentUser.uid);
-            if (res.success) {
-                // Take top 5 for recent activity
-                setRecentActivity(res.data.slice(0, 5));
-            }
+            // Real-time listener for reports
+            const reportsRef = ref(db, 'reports/' + currentUser.uid);
+            const unsubscribe = onValue(reportsRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Convert object to array
+                    const reports = Object.keys(data).map(key => ({
+                        id: key,
+                        ...data[key]
+                    }));
+
+                    // Sort by timestamp desc
+                    reports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    // Take top 5
+                    setRecentActivity(reports.slice(0, 5));
+                } else {
+                    setRecentActivity([]);
+                }
+                setLoading(false);
+            });
+
+            return () => unsubscribe();
         } else {
             setUserName('Guest');
             setRecentActivity([]);
+            setLoading(false);
         }
-        setLoading(false);
-        setRefreshing(false);
-    };
-
-    useFocusEffect(
-        useCallback(() => {
-            loadData();
-        }, [])
-    );
-
-    const onRefresh = () => {
-        setRefreshing(true);
-        loadData();
-    };
-
-    const formatDateRange = (isoDate) => {
-        if (!isoDate) return 'Today';
-        const date = new Date(isoDate);
-        const month = date.toLocaleString('default', { month: 'long' });
-        const day = date.getDate();
-        return `${month} ${day} - ${day}`; // Mimicking "July 25 - 25" format from image
-    };
+    }, []);
 
     const getRiskColor = (status) => {
         if (!status) return colors.primary;
@@ -59,6 +54,14 @@ const HomeScreen = ({ navigation }) => {
         if (lower.includes('high')) return '#FF5252';
         if (lower.includes('medium')) return '#FF9800';
         return '#2ECC71'; // Green for Low Risk
+    };
+
+    const formatDateRange = (isoDate) => {
+        if (!isoDate) return 'Today';
+        const date = new Date(isoDate);
+        const month = date.toLocaleString('default', { month: 'short' });
+        const day = date.getDate();
+        return `${month} ${day}`;
     };
 
     const renderActivityCard = (item) => {
@@ -100,6 +103,16 @@ const HomeScreen = ({ navigation }) => {
         }
     ];
 
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        // Real-time listener handles updates, so we just simulate a brief refresh
+        setTimeout(() => {
+            setRefreshing(false);
+        }, 1000);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView
@@ -110,7 +123,7 @@ const HomeScreen = ({ navigation }) => {
                 {/* Header */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.greetingText}>Hello,</Text>
+                        <Text style={styles.greetingText}>{t('welcome')},</Text>
                         <Text style={styles.userNameText}>{userName}</Text>
                     </View>
                     <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
@@ -123,7 +136,7 @@ const HomeScreen = ({ navigation }) => {
 
                 {/* Recent Activity Section */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Recent Activity</Text>
+                    <Text style={styles.sectionTitle}>{t('history')}</Text>
                     <TouchableOpacity onPress={() => navigation.navigate('History')}>
                         <Text style={styles.seeAllText}>See All</Text>
                     </TouchableOpacity>

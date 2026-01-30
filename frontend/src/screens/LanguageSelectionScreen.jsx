@@ -1,29 +1,38 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LanguageSelectionScreen = ({ navigation }) => {
-    // Selected language state
-    const [selectedId, setSelectedId] = useState('en');
+    const { t, i18n } = useTranslation();
+    const [selectedId, setSelectedId] = useState(i18n.language);
 
-    // Data for Indian Languages as requested
+    useEffect(() => {
+        setSelectedId(i18n.language);
+    }, []);
+
+    // Data for Indian Languages
     const languages = [
-        { id: 'en', name: 'English', native: 'English', flag: '🇮🇳' }, // Using Indian flag for Indian English context if desired, or US/UK. Let's use IN since user emphasized India.
+        { id: 'en', name: 'English', native: 'English', flag: '🇮🇳' },
         { id: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
         { id: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
-        { id: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
         { id: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
-        { id: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
-        { id: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
-        { id: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳' },
-        { id: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' }
+        // Add more locales to i18n.js resources if you enable them here
     ];
 
-    const handleSave = () => {
-        // Logic to save language preference would go here
-        navigation.goBack();
+    const handleSave = async () => {
+        try {
+            await i18n.changeLanguage(selectedId);
+            await AsyncStorage.setItem('language', selectedId);
+            Alert.alert("Success", "Language updated successfully", [
+                { text: "OK", onPress: () => navigation.goBack() }
+            ]);
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     return (
@@ -33,7 +42,7 @@ const LanguageSelectionScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Select Language</Text>
+                <Text style={styles.headerTitle}>{t('select_language')}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
@@ -70,7 +79,7 @@ const LanguageSelectionScreen = ({ navigation }) => {
             {/* Footer Save Button */}
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                    <Text style={styles.saveButtonText}>Save Selection</Text>
+                    <Text style={styles.saveButtonText}>{t('save_selection')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -122,7 +131,7 @@ const styles = StyleSheet.create({
     },
     languageItemSelected: {
         borderColor: colors.primary,
-        backgroundColor: '#F0FAFF', // Very light blue tint
+        backgroundColor: '#F0FAFF',
     },
     itemLeft: {
         flexDirection: 'row',
