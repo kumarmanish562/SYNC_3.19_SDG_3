@@ -3,34 +3,36 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 const HelpSupportScreen = ({ navigation }) => {
+    const { t } = useTranslation();
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Help & Support</Text>
+                <Text style={styles.headerTitle}>{t('help_title')}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.title}>How can we help?</Text>
+                <Text style={styles.title}>{t('help_how_can_we_help')}</Text>
                 <Text style={styles.description}>
-                    If you have any questions or need assistance, please refer to our FAQ or contact our support team.
+                    {t('help_desc')}
                 </Text>
 
                 <TouchableOpacity style={styles.linkItem}>
-                    <Text style={styles.linkText}>Frequently Asked Questions</Text>
+                    <Text style={styles.linkText}>{t('help_faq')}</Text>
                     <Ionicons name="chevron-forward" size={20} color="#CCC" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.linkItem}>
-                    <Text style={styles.linkText}>Contact Support Team</Text>
+                    <Text style={styles.linkText}>{t('help_contact')}</Text>
                     <Ionicons name="chevron-forward" size={20} color="#CCC" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.linkItem}>
-                    <Text style={styles.linkText}>Report a Bug</Text>
+                    <Text style={styles.linkText}>{t('help_report_bug')}</Text>
                     <Ionicons name="chevron-forward" size={20} color="#CCC" />
                 </TouchableOpacity>
             </ScrollView>

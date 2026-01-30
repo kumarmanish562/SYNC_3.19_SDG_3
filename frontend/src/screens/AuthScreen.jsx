@@ -119,8 +119,8 @@ const AuthScreen = ({ navigation }) => {
                 {/* Logo Section */}
                 <View style={styles.logoSection}>
                     <Image
-                        source={require('../../assets/logo.png')}
-                        style={{ width: 120, height: 120, resizeMode: 'contain' }}
+                        source={require('../../assets/swaas_logo.png')}
+                        style={{ width: 220, height: 150, resizeMode: 'contain' }}
                     />
                     {/* <Text style={styles.appTitle}>TB-SCAN</Text> */}
                     {/* <Text style={styles.appSubtitle}>Smart Tuberculosis Screening</Text> */}

@@ -22,11 +22,11 @@ const WelcomeScreen = ({ navigation }) => {
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
                         <Image
-                            source={require('../../assets/logo.png')}
+                            source={require('../../assets/swaas_logo.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
-                        <Text style={styles.headerText}>SwaaS</Text>
+                        {/* <Text style={styles.headerText}>SwaaS</Text> */}
                     </View>
                     <TouchableOpacity
                         style={styles.langButton}
@@ -101,32 +101,46 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        flexDirection: 'row',
+        width: '100%',
+        height: 140,
+        justifyContent: 'center',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 24,
         paddingTop: 10,
         marginBottom: 10,
+        position: 'relative',
     },
     langButton: {
+        position: 'absolute',
+        right: 24,
+        top: 40,
         padding: 8,
         borderRadius: 20,
-        backgroundColor: '#FFF',
+        backgroundColor: 'rgba(255,255,255,0.9)',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        zIndex: 10,
     },
     logoContainer: {
-        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 30,
+        paddingVertical: 15,
+        borderRadius: 24,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 8,
+        marginTop: 10,
     },
     logo: {
-        width: 40,
-        height: 40,
-        marginRight: 8,
+        width: 180,
+        height: 80,
+        resizeMode: 'contain',
     },
     headerText: {
         fontSize: 22,

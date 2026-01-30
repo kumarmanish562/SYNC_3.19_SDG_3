@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 const AboutScreen = ({ navigation }) => {
+    const { t } = useTranslation();
 
     const LinkItem = ({ icon, title, onPress, isExternal }) => (
         <TouchableOpacity style={styles.linkItem} onPress={onPress}>
@@ -29,7 +31,7 @@ const AboutScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>About</Text>
+                <Text style={styles.headerTitle}>{t('about_title')}</Text>
                 <View style={{ width: 28 }} />
             </View>
 
@@ -38,32 +40,32 @@ const AboutScreen = ({ navigation }) => {
                 {/* Logo Section */}
                 <View style={styles.logoSection}>
                     <View style={styles.logoContainer}>
-                        <MaterialCommunityIcons name="lungs" size={48} color={colors.primary} />
+                        <Image source={require('../../assets/swaas_logo.png')} style={{ width: 130, height: 130 }} resizeMode="contain" />
                     </View>
-                    <Text style={styles.appName}>TB-SCAN</Text>
-                    <Text style={styles.version}>Version 1.0.2</Text>
+                    <Text style={styles.appName}>SwaaS</Text>
+                    <Text style={styles.version}>{t('version_prefix')} 1.0.2</Text>
                 </View>
 
                 {/* Description */}
                 <Text style={styles.description}>
-                    TB-SCAN is dedicated to providing accessible early tuberculosis screening. Using advanced AI-powered cough audio analysis, we aim to empower communities with fast and reliable health assessments.
+                    {t('about_description')}
                 </Text>
 
                 {/* Links */}
                 <View style={styles.linksContainer}>
                     <LinkItem
                         icon="shield-check-outline"
-                        title="Privacy Policy"
+                        title={t('about_privacy')}
                         onPress={() => { }}
                     />
                     <LinkItem
                         icon="gavel"
-                        title="Terms of Service"
+                        title={t('about_terms')}
                         onPress={() => { }}
                     />
                     <LinkItem
                         icon="web"
-                        title="Support Website"
+                        title={t('about_website')}
                         onPress={() => { }}
                         isExternal
                     />
@@ -71,8 +73,8 @@ const AboutScreen = ({ navigation }) => {
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.copyright}>© 2024 TB-SCAN Health Systems Inc.</Text>
-                    <Text style={styles.rights}>All rights reserved.</Text>
+                    <Text style={styles.copyright}>{t('about_copyright')}</Text>
+                    <Text style={styles.rights}>{t('about_rights')}</Text>
                 </View>
 
             </ScrollView>
@@ -112,9 +114,9 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     logoContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 20,
+        width: 160,
+        height: 160,
+        borderRadius: 30,
         backgroundColor: '#E1F5FE', // Light blue
         justifyContent: 'center',
         alignItems: 'center',

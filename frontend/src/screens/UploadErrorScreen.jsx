@@ -14,7 +14,7 @@ const UploadErrorScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>TB-SCAN</Text>
+                <Text style={styles.headerTitle}>SwaaS</Text>
                 <View style={{ width: 28 }} />
             </View>
 
