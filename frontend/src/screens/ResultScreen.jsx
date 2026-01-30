@@ -13,14 +13,19 @@ const ResultScreen = ({ navigation, route }) => {
     const { score = 15, status } = route.params || {};
 
     const riskScore = score;
-    const isLowRisk = riskScore < 30; // 0-30 Low, 31-70 Medium, 71+ High
+    const isInvalid = status === 'Invalid' || score === 0;
+    const isLowRisk = riskScore < 30 && !isInvalid; // 0-30 Low, 31-70 Medium, 71+ High
     const isHighRisk = riskScore > 70;
 
     let riskLabel = t('risk_low');
     let riskColor = "#2ECC71"; // Green
     let riskBg = "#E8F8F5";
 
-    if (isHighRisk) {
+    if (isInvalid) {
+        riskLabel = "No Cough Detected"; // Or use translation key if available
+        riskColor = "#9E9E9E"; // Grey
+        riskBg = "#F5F5F5";
+    } else if (isHighRisk) {
         riskLabel = t('risk_high');
         riskColor = "#FF5252";
         riskBg = "#FFEBEE";
@@ -35,7 +40,7 @@ const ResultScreen = ({ navigation, route }) => {
     }
 
     // Date/Method props
-    const { timestamp } = route.params || {};
+    const { timestamp, trendSuggestion, coughType = "N/A", explanation } = route.params || {};
     const resultDate = timestamp ? new Date(timestamp) : new Date();
     const analysisDate = resultDate.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
     const method = t('method_value');
@@ -54,17 +59,14 @@ const ResultScreen = ({ navigation, route }) => {
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Score Circle Section */}
                 <View style={styles.scoreSection}>
-                    {/* 
-                      Simulating a progress ring without SVG:
-                    */}
                     <View style={styles.ringContainer}>
                         <View style={[styles.ring, { borderColor: '#E0E0E0' }]}>
                             {/* Background Ring */}
                         </View>
                         <View style={[styles.ringOverlay, {
-                            borderTopColor: colors.primary,
-                            borderRightColor: colors.primary,
-                            transform: [{ rotate: '-45deg' }] // Show roughly 25% progress visually
+                            borderTopColor: riskColor,
+                            borderRightColor: riskColor,
+                            transform: [{ rotate: `${(riskScore / 100) * 360 - 90}deg` }]
                         }]} />
 
                         <View style={styles.scoreTextContainer}>
@@ -82,6 +84,19 @@ const ResultScreen = ({ navigation, route }) => {
                     </View>
                 </View>
 
+                {/* AI Trend Suggestion Card */}
+                {trendSuggestion && (
+                    <View style={[styles.card, { backgroundColor: '#F0F7FF', borderColor: '#D1E8FF' }]}>
+                        <View style={styles.cardHeader}>
+                            <MaterialCommunityIcons name="trending-up" size={20} color={colors.primary} />
+                            <Text style={[styles.cardTitle, { color: colors.primary }]}>AI Health Insights</Text>
+                        </View>
+                        <Text style={[styles.cardBody, { color: '#2C3E50', fontWeight: '500' }]}>
+                            {trendSuggestion}
+                        </Text>
+                    </View>
+                )}
+
                 {/* Explanation Card */}
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
@@ -89,7 +104,7 @@ const ResultScreen = ({ navigation, route }) => {
                         <Text style={styles.cardTitle}>{t('result_explanation')}</Text>
                     </View>
                     <Text style={styles.cardBody}>
-                        {isLowRisk ? t('result_body_low') : (isHighRisk ? "High risk detected." : "Medium risk detected.")}
+                        {explanation ? explanation : (isLowRisk ? t('result_body_low') : (isHighRisk ? "High risk detected." : "Medium risk detected."))}
                     </Text>
                     <View style={styles.divider} />
                     <Text style={styles.cardDisclaimer}>
@@ -97,14 +112,18 @@ const ResultScreen = ({ navigation, route }) => {
                     </Text>
                 </View>
 
-                {/* Details Row */}
+                {/* Simple Action Cards */}
                 <View style={styles.detailsRow}>
                     <View style={styles.detailCard}>
-                        <Text style={styles.detailLabel}>{t('analysis_date')}</Text>
+                        <MaterialCommunityIcons name="water" size={16} color={colors.primary} />
+                        <Text style={styles.detailValue}>{coughType}</Text>
+                    </View>
+                    <View style={styles.detailCard}>
+                        <MaterialCommunityIcons name="clock-outline" size={16} color={colors.primary} />
                         <Text style={styles.detailValue}>{analysisDate}</Text>
                     </View>
                     <View style={styles.detailCard}>
-                        <Text style={styles.detailLabel}>{t('method')}</Text>
+                        <MaterialCommunityIcons name="microphone" size={16} color={colors.primary} />
                         <Text style={styles.detailValue}>{method}</Text>
                     </View>
                 </View>
@@ -113,14 +132,14 @@ const ResultScreen = ({ navigation, route }) => {
                 <View style={styles.actionsContainer}>
                     <TouchableOpacity
                         style={styles.primaryButton}
-                        onPress={() => navigation.navigate('ReportDetails')}
+                        onPress={() => navigation.navigate('ReportDetails', { score, status, timestamp, trendSuggestion, coughType, explanation })}
                     >
                         <Ionicons name="document-text-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
                         <Text style={styles.primaryBtnText}>{t('view_detailed_report')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.secondaryButton}
+                        style={[styles.secondaryButton, { backgroundColor: '#F9F9F9' }]}
                         onPress={() => navigation.navigate('NearbyClinics')}
                     >
                         <Ionicons name="location-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />

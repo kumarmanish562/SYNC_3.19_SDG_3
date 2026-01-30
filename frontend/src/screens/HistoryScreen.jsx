@@ -87,7 +87,8 @@ const HistoryScreen = ({ navigation }) => {
                             onPress={() => navigation.navigate('Result', {
                                 score: item.score,
                                 status: item.status,
-                                timestamp: item.timestamp
+                                timestamp: item.timestamp,
+                                trendSuggestion: item.trendSuggestion
                             })}
                         >
                             <Text style={styles.viewDetailsText}>{t('view_details')}</Text>

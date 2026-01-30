@@ -3,10 +3,22 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { checkServerStatus } from '../services/api';
+import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-const UploadErrorScreen = ({ navigation }) => {
+const UploadErrorScreen = ({ navigation, route }) => {
+    const errorMessage = route?.params?.errorMessage;
+
+    const handleCheckConnection = async () => {
+        const result = await checkServerStatus();
+        if (result.success) {
+            Alert.alert("Success", "Your phone successfully connected to the backend!\n\nServer says: " + result.message);
+        } else {
+            Alert.alert("Connection Failed", "Your phone could NOT reach the server.\n\nError: " + result.message + "\n\nPlease ensure your PC and phone are on the same Wi-Fi and firewall is open.");
+        }
+    };
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
@@ -34,7 +46,7 @@ const UploadErrorScreen = ({ navigation }) => {
                 {/* Error Text */}
                 <Text style={styles.title}>Something went wrong</Text>
                 <Text style={styles.description}>
-                    The audio recording for your screening failed to upload. Please check your internet connection and try again.
+                    {errorMessage || "The audio recording for your screening failed to upload. Please check your internet connection and try again."}
                 </Text>
 
                 {/* Divider Line */}
@@ -47,6 +59,16 @@ const UploadErrorScreen = ({ navigation }) => {
                         onPress={() => navigation.goBack()} // Or a specific retry logic
                     >
                         <Text style={styles.retryButtonText}>Try Again</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.dashboardButton}
+                        onPress={handleCheckConnection}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="flash-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+                            <Text style={[styles.dashboardButtonText, { color: colors.primary }]}>Check Connection to PC</Text>
+                        </View>
                     </TouchableOpacity>
 
                     <TouchableOpacity

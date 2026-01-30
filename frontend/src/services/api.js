@@ -39,20 +39,23 @@ export const analyzeCough = async (audioUri, userId, fileMetadata = {}) => {
                 headers: {
                     "Content-Type": "multipart/form-data"
                 },
-                timeout: 10000 // 10s timeout
+                timeout: 60000 // 60s timeout for local AI model processing
             }
         );
 
         return res.data;
     } catch (error) {
-        console.error("API Error:", error);
+        console.error("API Error Detailed:", {
+            message: error.message,
+            code: error.code,
+            config: error.config?.url,
+            status: error.response?.status
+        });
+
         // Fallback for demo if backend not reachable
         return {
             success: false,
-            data: {
-                score: Math.floor(Math.random() * 80),
-                status: "Analysis Failed (Offline Mode)"
-            }
+            error: `Connection Failed: ${error.message}. Ensure phone and PC are on the same Wi-Fi.`
         };
     }
 };
@@ -87,5 +90,16 @@ export const verifyOtp = async (email, otp) => {
     } catch (error) {
         console.error("Verify Error:", error);
         throw error;
+    }
+};
+
+export const checkServerStatus = async () => {
+    try {
+        // Strip /api as our test route is the root '/'
+        const rootUrl = API_URL.replace('/api', '');
+        const res = await axios.get(`${rootUrl}/`, { timeout: 5000 });
+        return { success: true, message: res.data };
+    } catch (error) {
+        return { success: false, message: error.message };
     }
 };

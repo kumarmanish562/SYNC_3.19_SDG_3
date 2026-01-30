@@ -19,8 +19,8 @@ const AnalyzingScreen = ({ route, navigation }) => {
         let isMounted = true;
 
         const performAnalysis = async () => {
-            // Artificial delay for UX
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Artificial delay removed for faster debugging
+            // await new Promise(resolve => setTimeout(resolve, 2000));
 
             if (!audioUri) {
                 // Testing fallback
@@ -36,11 +36,15 @@ const AnalyzingScreen = ({ route, navigation }) => {
                     if (result && result.success) {
                         navigation.replace('Result', {
                             score: result.data.score,
-                            status: result.data.status
+                            status: result.data.status,
+                            timestamp: result.data.timestamp,
+                            trendSuggestion: result.data.trendSuggestion,
+                            coughType: result.data.coughType,
+                            explanation: result.data.explanation
                         });
                     } else {
                         // Handle error or fallback
-                        navigation.replace('UploadError');
+                        navigation.replace('UploadError', { errorMessage: result?.error });
                     }
                 }
             } catch (error) {

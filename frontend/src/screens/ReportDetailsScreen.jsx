@@ -10,55 +10,114 @@ import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
-const ReportDetailsScreen = ({ navigation }) => {
+const ReportDetailsScreen = ({ navigation, route }) => {
     const { t } = useTranslation();
-    // Hardcoded data based on the image provided
-    const date = "OCT 24, 2023";
-    const time = "10:45 AM";
-    const riskPercentage = 15;
+
+    // Get real data from route params
+    const {
+        score = 15,
+        status = 'low_risk',
+        timestamp,
+        trendSuggestion = "",
+        coughType = "N/A",
+        explanation = ""
+    } = route.params || {};
+
+    const riskPercentage = score;
+    const resultDate = timestamp ? new Date(timestamp) : new Date();
+    const dateFormatted = resultDate.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
+    const timeFormatted = resultDate.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' });
+
     const isLowRisk = riskPercentage < 30;
+    const isHighRisk = riskPercentage > 70;
+
+    const getRiskLabel = () => {
+        if (status && status !== 'Pending') return status;
+        if (isHighRisk) return t('risk_high');
+        if (riskPercentage > 30) return t('risk_medium');
+        return t('risk_low');
+    };
 
     const handleDownloadPDF = async () => {
         try {
             const html = `
                 <html>
                   <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
                     <style>
-                      body { font-family: sans-serif; padding: 20px; }
-                      h1 { color: #333; }
-                      .risk-card { padding: 20px; background-color: #f0f0f0; border-radius: 10px; margin-bottom: 20px; }
-                      .risk-value { font-size: 40px; font-weight: bold; color: #000; }
-                      .section { margin-bottom: 20px; }
-                      .disclaimer { font-size: 10px; color: #888; font-style: italic; margin-top: 40px; }
+                      body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+                      .header-table { width: 100%; border-bottom: 2px solid ${colors.primary}; padding-bottom: 10px; margin-bottom: 30px; }
+                      .report-title { font-size: 24px; font-weight: bold; color: ${colors.primary}; margin: 0; }
+                      .meta-table { width: 100%; margin-bottom: 30px; border-collapse: collapse; }
+                      .meta-label { font-size: 10px; color: #888; text-transform: uppercase; font-weight: bold; }
+                      .meta-value { font-size: 14px; font-weight: bold; padding: 5px 0 15px 0; border-bottom: 1px solid #eee; }
+                      .risk-section { background-color: #f8f9fa; padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 30px; border: 1px solid #dee2e6; }
+                      .risk-val { font-size: 48px; font-weight: bold; margin: 10px 0; }
+                      .trend-section { background-color: #F0F7FF; padding: 20px; border-radius: 10px; border-left: 5px solid ${colors.primary}; margin-bottom: 30px; }
+                      .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+                      .disclaimer { font-size: 10px; color: #999; font-style: italic; margin-top: 50px; text-align: center; }
                     </style>
                   </head>
                   <body>
-                    <h1>${t('report_title')}</h1>
-                    <p>Date: ${date} • Time: ${time}</p>
+                    <table class="header-table">
+                        <tr>
+                            <td><h1 class="report-title">MEDICAL ANALYSIS REPORT</h1></td>
+                            <td align="right"><p style="margin:0; font-size:12px; color:#666">CoughX AI Digital Health • Type: ${coughType}</p></td>
+                        </tr>
+                    </table>
+
+                    <table class="meta-table">
+                        <tr>
+                            <td width="50%">
+                                <div class="meta-label">Report ID</div>
+                                <div class="meta-value">#CX-${timestamp ? timestamp.toString().slice(-6) : 'DEMO'}</div>
+                            </td>
+                            <td width="30%"></td>
+                            <td width="20%" align="right">
+                                <div class="meta-label">Date/Time</div>
+                                <div class="meta-value">${dateFormatted} ${timeFormatted}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td width="50%">
+                                <div class="meta-label">Patient Record</div>
+                                <div class="meta-value">User: ${route.params?.userId || 'Authorized User'}</div>
+                            </td>
+                            <td width="30%"></td>
+                            <td width="20%" align="right">
+                                <div class="meta-label">Type</div>
+                                <div class="meta-value">Respiratory Scan</div>
+                            </td>
+                        </tr>
+                    </table>
                     
-                    <div class="risk-card">
-                        <p>${t('report_risk_level')}</p>
-                        <div class="risk-value">${riskPercentage}%</div>
-                        <p>${t('report_low_risk')}</p>
+                    <div class="risk-section">
+                        <div class="meta-label">${t('report_risk_level')}</div>
+                        <div class="risk-val">${riskPercentage}%</div>
+                        <div style="font-weight: bold; color: ${isLowRisk ? '#2ECC71' : (isHighRisk ? '#FF5252' : '#FF9800')}">${getRiskLabel().toUpperCase()}</div>
                     </div>
 
-                    <div class="section">
-                        <h3>${t('report_summary_title')}</h3>
-                        <p>${t('report_summary_text')}</p>
+                    ${trendSuggestion ? `
+                    <div class="section-title">Clinical Trend Analysis</div>
+                    <div class="trend-section">
+                        <p style="margin: 0; font-style: italic;">"${trendSuggestion}"</p>
                     </div>
+                    ` : ''}
 
-                    <div class="section">
-                        <h3>${t('report_recommendation_title')}</h3>
-                        <ul>
-                            <li><strong>${t('report_rec_1_title')}</strong>: ${t('report_rec_1_desc')}</li>
-                            <li><strong>${t('report_rec_2_title')}</strong>: ${t('report_rec_2_desc')}</li>
-                        </ul>
-                    </div>
+                    <div class="section-title">${t('report_summary_title')}</div>
+                    <p>${explanation ? explanation : t('report_summary_text')}</p>
+
+                    <div class="section-title">${t('report_recommendation_title')}</div>
+                    <ul style="padding-left: 20px">
+                        <li><strong>Monitor Symptoms</strong>: Continue to track your cough frequency and any associated fever or weight loss.</li>
+                        <li><strong>Clinical Consultation</strong>: This is an AI-assisted baseline. Please consult a qualified physician for a definitive diagnosis.</li>
+                    </ul>
 
                     <div class="disclaimer">
                         ${t('report_disclaimer')}
+                        <br/>
+                        <center><b>Generated by CoughX AI (v1.0.0)</b></center>
                     </div>
-                    <p><small>Generated by SwaaS</small></p>
                   </body>
                 </html>
             `;
@@ -66,35 +125,51 @@ const ReportDetailsScreen = ({ navigation }) => {
             const { uri } = await Print.printToFileAsync({ html });
 
             if (Platform.OS === 'android') {
+                // Request directory permission for direct download
                 const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
                 if (permissions.granted) {
                     const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-                    await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, 'SwaaS_Report.pdf', 'application/pdf')
-                        .then(async (createdUri) => {
-                            await FileSystem.writeAsStringAsync(createdUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-                            Alert.alert(t('alert_success'), "Report saved successfully!");
-                        })
-                        .catch(e => {
-                            console.log(e);
-                            Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-                        });
+                    const fileName = `CoughX_Report_${Date.now()}.pdf`;
+
+                    try {
+                        const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+                            permissions.directoryUri,
+                            fileName,
+                            'application/pdf'
+                        );
+                        await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+                        Alert.alert("Download Successful", `Medical report has been saved as ${fileName}`);
+                    } catch (saveError) {
+                        console.log("Direct Save Error:", saveError);
+                        await Sharing.shareAsync(uri);
+                    }
                 } else {
-                    Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+                    // Fallback to share sheet if permission denied
+                    await Sharing.shareAsync(uri);
                 }
             } else {
-                await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+                // iOS: System share sheet is the standard way to "Save to Files"
+                await Sharing.shareAsync(uri, {
+                    UTI: '.pdf',
+                    mimeType: 'application/pdf',
+                    dialogTitle: 'Save CoughX Report'
+                });
             }
+
         } catch (error) {
-            Alert.alert(t('alert_error'), "Failed to generate PDF");
+            console.error("PDF Generation Error:", error);
+            Alert.alert("Error", "Could not generate or save the PDF report.");
         }
     };
 
     const handleShareReport = async () => {
         try {
             const message = `${t('report_title')}\n` +
-                `${t('report_risk_level')}: ${riskPercentage}% (${t('report_low_risk')})\n\n` +
-                `${t('report_summary_title')}: ${t('report_summary_text')}\n\n` +
-                `SwaaS`;
+                `${t('report_risk_level')}: ${riskPercentage}% (${getRiskLabel()})\n` +
+                `Cough Type: ${coughType}\n` +
+                (trendSuggestion ? `AI Insight: ${trendSuggestion}\n\n` : '\n') +
+                `Summary: ${explanation || t('report_summary_text')}\n\n` +
+                `CoughX AI`;
 
             await Share.share({
                 message,
@@ -117,24 +192,58 @@ const ReportDetailsScreen = ({ navigation }) => {
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                {/* Date Header */}
-                <View style={styles.dateContainer}>
-                    <Ionicons name="calendar-outline" size={14} color="#666" style={{ marginRight: 6 }} />
-                    <Text style={styles.dateText}>{date} • {time}</Text>
-                </View>
-
-                {/* Main Risk Card */}
-                <View style={styles.riskCard}>
-                    <Text style={styles.riskLabel}>{t('report_risk_level')}</Text>
-                    <Text style={styles.riskValue}>{riskPercentage}%</Text>
-
-                    <View style={styles.riskBadge}>
-                        <View style={styles.riskIconCircle}>
-                            <Ionicons name="checkmark" size={10} color="#FFF" />
+                {/* formal header section */}
+                <View style={styles.formalReportCard}>
+                    <View style={styles.reportRow}>
+                        <View>
+                            <Text style={styles.formalLabel}>REPORT ID</Text>
+                            <Text style={styles.formalValue}>#CX-{timestamp ? timestamp.toString().slice(-6) : 'N/A'}</Text>
                         </View>
-                        <Text style={styles.riskBadgeText}>{t('report_low_risk')}</Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={styles.formalLabel}>DATE & TIME</Text>
+                            <Text style={styles.formalValue}>{dateFormatted} • {timeFormatted}</Text>
+                        </View>
+                    </View>
+
+                    <View style={[styles.divider, { marginVertical: 15 }]} />
+
+                    <View style={styles.reportRow}>
+                        <View>
+                            <Text style={styles.formalLabel}>PATIENT NAME</Text>
+                            <Text style={styles.formalValue}>User ID: {route.params?.userId || 'Demo User'}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={styles.formalLabel}>COUGH TYPE</Text>
+                            <Text style={styles.formalValue}>{coughType}</Text>
+                        </View>
                     </View>
                 </View>
+
+                {/* Main Risk Card - More compact for medical feel */}
+                <View style={[styles.riskCard, { paddingVertical: 20 }]}>
+                    <View style={styles.horizontalRisk}>
+                        <View>
+                            <Text style={styles.riskLabel}>{t('report_risk_level')}</Text>
+                            <Text style={[styles.riskValue, { fontSize: 40, marginBottom: 0 }]}>{riskPercentage}%</Text>
+                        </View>
+                        <View style={[styles.riskBadge, { backgroundColor: isLowRisk ? '#E8F5E9' : (isHighRisk ? '#FFEBEE' : '#FFF3E0'), alignSelf: 'center' }]}>
+                            <Text style={[styles.riskBadgeText, { color: isLowRisk ? '#2ECC71' : (isHighRisk ? '#FF5252' : '#FF9800') }]}>{getRiskLabel()}</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* AI Trend Section - Formal Clinical Note style */}
+                {trendSuggestion && (
+                    <View style={styles.clinicalNoteBox}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                            <Ionicons name="medical" size={16} color={colors.primary} />
+                            <Text style={styles.clinicalNoteTitle}> CLINICAL TREND ANALYSIS</Text>
+                        </View>
+                        <Text style={styles.clinicalNoteText}>
+                            {trendSuggestion}
+                        </Text>
+                    </View>
+                )}
 
                 {/* Summary Section */}
                 <View style={styles.sectionHeader}>
@@ -144,7 +253,7 @@ const ReportDetailsScreen = ({ navigation }) => {
 
                 <View style={styles.summaryCard}>
                     <Text style={styles.summaryText}>
-                        {t('report_summary_text')}
+                        {explanation ? explanation : t('report_summary_text')}
                     </Text>
                 </View>
 
@@ -256,13 +365,64 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 20,
         padding: 30,
-        alignItems: 'center',
         marginBottom: 24,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
+    },
+    horizontalRisk: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        alignItems: 'center',
+    },
+    formalReportCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderLeftWidth: 5,
+        borderLeftColor: colors.primary,
+    },
+    reportRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    formalLabel: {
+        fontSize: 10,
+        color: '#999',
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    formalValue: {
+        fontSize: 14,
+        color: '#333',
+        fontWeight: '600',
+    },
+    clinicalNoteBox: {
+        backgroundColor: '#F0F7FF',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: '#D1E8FF',
+    },
+    clinicalNoteTitle: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: colors.primary,
+        letterSpacing: 0.5,
+    },
+    clinicalNoteText: {
+        fontSize: 14,
+        color: '#44546A',
+        lineHeight: 20,
+        fontStyle: 'italic',
     },
     riskLabel: {
         fontSize: 12,

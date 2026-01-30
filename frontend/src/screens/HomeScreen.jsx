@@ -47,6 +47,7 @@ const HomeScreen = ({ navigation }) => {
     const getRiskColor = (status) => {
         if (!status) return colors.primary;
         const lower = status.toLowerCase();
+        if (lower.includes('invalid') || lower.includes('no cough')) return '#9E9E9E'; // Gray for invalid
         if (lower.includes('high')) return '#FF5252';
         if (lower.includes('medium')) return '#FF9800';
         return '#2ECC71';
