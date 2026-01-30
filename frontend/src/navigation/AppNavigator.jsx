@@ -15,6 +15,9 @@ import MedicalDisclaimerScreen from '../screens/MedicalDisclaimerScreen';
 import UploadErrorScreen from '../screens/UploadErrorScreen';
 import MicrophoneAccessScreen from '../screens/MicrophoneAccessScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import HelpSupportScreen from '../screens/HelpSupportScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -44,6 +47,9 @@ const AppNavigator = () => {
             <Stack.Screen name="UploadError" component={UploadErrorScreen} />
             <Stack.Screen name="MicrophoneAccess" component={MicrophoneAccessScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} />
+            <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             {/* Add other screens here as needed, e.g., Login, Dashboard */}
         </Stack.Navigator>
     );

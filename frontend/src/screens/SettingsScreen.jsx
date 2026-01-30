@@ -63,7 +63,7 @@ const SettingsScreen = ({ navigation }) => {
                     icon="notifications-outline"
                     title="Notifications"
                     subtitle="Enabled"
-                    onPress={() => { }}
+                    onPress={() => navigation.navigate('Notifications')}
                 />
 
                 {/* INFORMATION & SUPPORT Section */}
@@ -72,7 +72,7 @@ const SettingsScreen = ({ navigation }) => {
                 <SettingsItem
                     icon="help-circle-outline"
                     title="Help & Support"
-                    onPress={() => { }}
+                    onPress={() => navigation.navigate('HelpSupport')}
                 />
 
                 <SettingsItem
@@ -90,7 +90,7 @@ const SettingsScreen = ({ navigation }) => {
                 <SettingsItem
                     icon="lock-closed-outline"
                     title="Privacy Policy"
-                    onPress={() => { }}
+                    onPress={() => navigation.navigate('PrivacyPolicy')}
                 />
 
                 {/* Logout Button */}
