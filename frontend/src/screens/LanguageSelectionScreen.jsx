@@ -1,0 +1,184 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../theme/colors';
+
+const LanguageSelectionScreen = ({ navigation }) => {
+    // Selected language state
+    const [selectedId, setSelectedId] = useState('en');
+
+    // Data for Indian Languages as requested
+    const languages = [
+        { id: 'en', name: 'English', native: 'English', flag: '🇮🇳' }, // Using Indian flag for Indian English context if desired, or US/UK. Let's use IN since user emphasized India.
+        { id: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+        { id: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
+        { id: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
+        { id: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
+        { id: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
+        { id: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
+        { id: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳' },
+        { id: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' }
+    ];
+
+    const handleSave = () => {
+        // Logic to save language preference would go here
+        navigation.goBack();
+    };
+
+    return (
+        <SafeAreaView style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color="#000" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Select Language</Text>
+                <View style={{ width: 24 }} />
+            </View>
+
+            <ScrollView contentContainerStyle={styles.listContainer}>
+                {languages.map((lang) => {
+                    const isSelected = selectedId === lang.id;
+                    return (
+                        <TouchableOpacity
+                            key={lang.id}
+                            style={[
+                                styles.languageItem,
+                                isSelected && styles.languageItemSelected
+                            ]}
+                            onPress={() => setSelectedId(lang.id)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.itemLeft}>
+                                <Text style={styles.flag}>{lang.flag}</Text>
+                                <View>
+                                    <Text style={styles.languageName}>
+                                        {lang.native} <Text style={styles.languageNameSub}>({lang.name})</Text>
+                                    </Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.radioOuter}>
+                                {isSelected && <View style={styles.radioInner} />}
+                            </View>
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+
+            {/* Footer Save Button */}
+            <View style={styles.footer}>
+                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                    <Text style={styles.saveButtonText}>Save Selection</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#000',
+    },
+    backButton: {
+        padding: 4,
+    },
+    listContainer: {
+        padding: 20,
+        paddingBottom: 100,
+    },
+    languageItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    languageItemSelected: {
+        borderColor: colors.primary,
+        backgroundColor: '#F0FAFF', // Very light blue tint
+    },
+    itemLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    flag: {
+        fontSize: 24,
+        marginRight: 16,
+    },
+    languageName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+    },
+    languageNameSub: {
+        fontWeight: '400',
+        color: '#777',
+        fontSize: 14,
+    },
+    radioOuter: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        borderWidth: 2,
+        borderColor: '#CCC',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    radioInner: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: colors.primary,
+    },
+    footer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 20,
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+    },
+    saveButton: {
+        backgroundColor: colors.primary,
+        borderRadius: 12,
+        paddingVertical: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    saveButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+});
+
+export default LanguageSelectionScreen;
