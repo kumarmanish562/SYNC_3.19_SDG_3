@@ -9,7 +9,7 @@ import { analyzeCough } from '../services/api';
 import { auth } from '../services/firebaseConfig';
 
 const AnalyzingScreen = ({ route, navigation }) => {
-    const { audioUri } = route.params || {};
+    const { audioUri, fileMetadata } = route.params || {};
 
     useEffect(() => {
         let isMounted = true;
@@ -26,7 +26,7 @@ const AnalyzingScreen = ({ route, navigation }) => {
 
             try {
                 const userId = auth.currentUser ? auth.currentUser.uid : null;
-                const result = await analyzeCough(audioUri, userId);
+                const result = await analyzeCough(audioUri, userId, fileMetadata);
 
                 if (isMounted) {
                     if (result && result.success) {

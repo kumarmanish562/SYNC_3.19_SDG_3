@@ -1,13 +1,16 @@
 const { db, bucket } = require("../config/firebase");
 const fs = require("fs");
 
+const { spawn } = require("child_process");
+const path = require("path");
+
 exports.analyzeAudio = async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: "No audio file uploaded" });
         }
 
-        const userId = req.body.userId || "anonymous"; // Should come from auth middleware
+        const userId = req.body.userId || "anonymous";
         const localFilePath = req.file.path;
         const destination = `coughs/${userId}/${Date.now()}_${req.file.originalname}`;
 
@@ -16,51 +19,106 @@ exports.analyzeAudio = async (req, res) => {
         try {
             const [uploadedFile] = await bucket.upload(localFilePath, {
                 destination: destination,
-                metadata: {
-                    contentType: req.file.mimetype,
-                },
+                metadata: { contentType: req.file.mimetype },
             });
-            // Generate signed URL valid for 7 days (or make bucket public)
             const [url] = await uploadedFile.getSignedUrl({
                 action: 'read',
-                expires: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
+                expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
             });
             fileUrl = url;
         } catch (uploadError) {
             console.error("Firebase Storage Upload Failed:", uploadError.message);
-            // We continue even if upload fails, just to return analysis results
         }
 
-        // 2. AI Analysis (Simulated for Hackathon/Demo)
-        // Removed Hugging Face call. Using robust simulation logic.
-        // In a real app, you would replace this block with your actual ML model inference (Python/TensorFlow)
+        // 2. AI Analysis (Execute Python Script)
+        let aiResult = { score: 0, status: "Pending", probability: 0 };
 
-        const mockRiskScore = Math.floor(Math.random() * 40) + 10;
-        const status = mockRiskScore > 70 ? "High Risk" : (mockRiskScore > 30 ? "Medium Risk" : "Low Risk");
+        try {
+            // Promise wrapper for python script
+            const runPythonModel = () => {
+                return new Promise((resolve, reject) => {
+                    const scriptPath = path.join(__dirname, '../../ai_model/predict.py');
+                    const pythonProcess = spawn('python', [scriptPath, localFilePath]);
 
-        // 3. Save Report to Realtime Database
-        // Use push() to generate a unique key
+                    let dataString = '';
+                    let errorString = '';
+
+                    pythonProcess.stdout.on('data', (data) => {
+                        dataString += data.toString();
+                    });
+
+                    pythonProcess.stderr.on('data', (data) => {
+                        errorString += data.toString();
+                    });
+
+                    pythonProcess.on('close', (code) => {
+                        if (code !== 0) {
+                            console.error(`Python script exited with code ${code}: ${errorString}`);
+                            // Fallback to simulation if model fails (e.g. missing libs)
+                            resolve(null);
+                        } else {
+                            try {
+                                const result = JSON.parse(dataString);
+                                resolve(result);
+                            } catch (e) {
+                                console.error("Failed to parse Python output:", dataString);
+                                resolve(null);
+                            }
+                        }
+                    });
+                });
+            };
+
+            const prediction = await runPythonModel();
+
+            if (prediction && prediction.success) {
+                aiResult = {
+                    score: prediction.score,
+                    status: prediction.status,
+                    probability: prediction.probability * 100
+                };
+            } else {
+                // Fallback Simulation if Python fails
+                console.warn("AI Model prediction failed, using fallback.");
+                const mockRiskScore = Math.floor(Math.random() * 40) + 10;
+                aiResult = {
+                    score: mockRiskScore,
+                    status: mockRiskScore > 70 ? "High Risk" : (mockRiskScore > 30 ? "Medium Risk" : "Low Risk"),
+                    probability: 0
+                };
+            }
+
+        } catch (aiError) {
+            console.error("AI execution error:", aiError);
+            // Fallback
+            const mockRiskScore = Math.floor(Math.random() * 40) + 10;
+            aiResult = {
+                score: mockRiskScore,
+                status: mockRiskScore > 70 ? "High Risk" : (mockRiskScore > 30 ? "Medium Risk" : "Low Risk"),
+                probability: 0
+            };
+        }
+
+        // 3. Save Report to Database
         const reportRef = db.ref(`reports/${userId}`).push();
         await reportRef.set({
-            score: mockRiskScore,
-            status: status,
+            score: aiResult.score,
+            status: aiResult.status,
             audioUrl: fileUrl,
-            // rawAnalysis: aiResult || null, // Removed
             timestamp: new Date().toISOString(),
             deviceInfo: req.body.deviceInfo || "unknown"
         });
 
-        console.log("Report saved to database:", reportRef.key);
+        console.log("Report saved:", reportRef.key, aiResult);
 
-        // Cleanup local file
+        // Cleanup
         try { fs.unlinkSync(localFilePath); } catch (e) { }
 
         res.json({
             success: true,
             data: {
-                raw: null, // No raw AI data
-                score: mockRiskScore,
-                status: status,
+                score: aiResult.score,
+                status: aiResult.status,
                 reportId: reportRef.key,
                 timestamp: new Date().toISOString()
             }

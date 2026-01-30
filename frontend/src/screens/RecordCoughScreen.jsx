@@ -7,6 +7,8 @@ import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 
+import * as DocumentPicker from 'expo-document-picker';
+
 const RecordCoughScreen = ({ navigation }) => {
     const [recording, setRecording] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
@@ -62,6 +64,26 @@ const RecordCoughScreen = ({ navigation }) => {
         navigation.navigate('Analyzing', { audioUri: uri });
     };
 
+    const pickAudio = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: 'audio/*',
+                copyToCacheDirectory: true
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const file = result.assets[0];
+                navigation.navigate('Analyzing', {
+                    audioUri: file.uri,
+                    fileMetadata: { name: file.name, type: file.mimeType }
+                });
+            }
+        } catch (err) {
+            console.error("Error picking file", err);
+            Alert.alert("Error", "Failed to select audio file.");
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
@@ -103,6 +125,13 @@ const RecordCoughScreen = ({ navigation }) => {
                     <Text style={styles.subInstruction}>
                         {isRecording ? "Tap again to stop" : "Hold for 5 seconds for best results"}
                     </Text>
+
+                    {!isRecording && (
+                        <TouchableOpacity style={styles.uploadButton} onPress={pickAudio}>
+                            <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
+                            <Text style={styles.uploadButtonText}>Upload Audio File</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Footer Status */}
@@ -253,6 +282,23 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
         borderRadius: 4,
     },
+    uploadButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 24,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        backgroundColor: '#F0FAFF'
+    },
+    uploadButtonText: {
+        fontSize: 14,
+        color: colors.primary,
+        fontWeight: '600',
+        marginLeft: 8
+    }
 });
 
 export default RecordCoughScreen;

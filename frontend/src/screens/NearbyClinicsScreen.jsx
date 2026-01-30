@@ -1,67 +1,146 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Linking, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Linking, Platform, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 
 const NearbyClinicsScreen = ({ navigation }) => {
-    // Dummy Data for Clinics with Coordinates
-    const clinics = [
-        {
-            id: 1,
-            name: "City Health TB Center",
-            status: "OPEN",
-            statusColor: "#4CAF50", // Green
-            statusBg: "#E8F5E9",
-            distance: "0.8 km away",
-            time: "12 mins",
-            address: "123 Medical Plaza, Suite 400, Brooklyn, NY 11201",
-            phone: "555-0123",
-            coordinates: { lat: 40.6925, lng: -73.9911 },
-            type: "TB Center"
-        },
-        {
-            id: 2,
-            name: "St. Mary's Respiratory",
-            status: "CLOSING SOON",
-            statusColor: "#FF9800", // Orange
-            statusBg: "#FFF3E0",
-            distance: "2.5 km away",
-            time: "8 mins",
-            address: "45 Respiratory Rd, Brooklyn, NY 11205",
-            phone: "555-0199",
-            coordinates: { lat: 40.6950, lng: -73.9800 },
-            type: "Clinic"
-        },
-        {
-            id: 3,
-            name: "Brooklyn Lung Specialist",
-            status: "OPEN",
-            statusColor: "#4CAF50",
-            statusBg: "#E8F5E9",
-            distance: "3.2 km away",
-            time: "15 mins",
-            address: "88 Health Ave, Brooklyn, NY 11206",
-            phone: "555-0255",
-            coordinates: { lat: 40.7000, lng: -73.9400 },
-            type: "Specialist"
+    const [location, setLocation] = useState(null);
+    const [errorMsg, setErrorMsg] = useState(null);
+    const [clinics, setClinics] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        (async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                setLoading(false);
+                return;
+            }
+
+            let loc = await Location.getCurrentPositionAsync({});
+            setLocation(loc.coords);
+
+            // Generate dummy hospitals around this location
+            fetchNearbyClinics(loc.coords.latitude, loc.coords.longitude);
+            setLoading(false);
+        })();
+    }, []);
+
+    const fetchNearbyClinics = async (lat, lng) => {
+        const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+            console.warn("No Google Maps API Key found, using dummy data.");
+            generateNearbyClinics(lat, lng);
+            return;
         }
-    ];
+
+        try {
+            const radius = 5000; // 5km
+            const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=hospital,clinic&key=${apiKey}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.status === 'OK' && data.results.length > 0) {
+                const realClinics = data.results.map((place) => {
+                    const distKm = getDistanceFromLatLonInKm(lat, lng, place.geometry.location.lat, place.geometry.location.lng);
+                    const isOpen = place.opening_hours ? place.opening_hours.open_now : true;
+
+                    return {
+                        id: place.place_id,
+                        name: place.name,
+                        status: isOpen ? "OPEN" : "CLOSED",
+                        statusColor: isOpen ? "#4CAF50" : "#FF5252",
+                        statusBg: isOpen ? "#E8F5E9" : "#FFEBEE",
+                        distance: `${distKm.toFixed(1)} km`,
+                        time: `${Math.ceil(distKm * 5)} mins`, // Approx driving time
+                        address: place.vicinity,
+                        phone: "Unavailable", // Requires 'Place Details' API
+                        coordinates: {
+                            latitude: place.geometry.location.lat,
+                            longitude: place.geometry.location.lng
+                        },
+                        type: "Healthcare Provider",
+                        rating: place.rating
+                    };
+                });
+
+                setClinics(realClinics.slice(0, 10)); // Limit to 10
+            } else {
+                console.warn("Google Places API returned no results or error:", data.status);
+                generateNearbyClinics(lat, lng);
+            }
+        } catch (error) {
+            console.error("Error fetching places:", error);
+            generateNearbyClinics(lat, lng);
+        }
+    };
+
+    // Helper for Distance Calculation (Haversine)
+    function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+        var R = 6371; // Radius of the earth in km
+        var dLat = deg2rad(lat2 - lat1);
+        var dLon = deg2rad(lon2 - lon1);
+        var a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        var d = R * c; // Distance in km
+        return d;
+    }
+
+    function deg2rad(deg) {
+        return deg * (Math.PI / 180);
+    }
+
+    // Fallback Dummy Generator
+    const generateNearbyClinics = (lat, lng) => {
+        const placeNames = ["City General Hospital", "Apex Pulmonary Center", "Community Health Clinic", "St. Luke's Respiratory Care"];
+        const types = ["Hospital", "Specialist", "Clinic", "Hospital"];
+
+        const newClinics = placeNames.map((name, index) => {
+            const latOffset = (Math.random() - 0.5) * 0.02;
+            const lngOffset = (Math.random() - 0.5) * 0.02;
+            const distance = (Math.sqrt(Math.pow(latOffset, 2) + Math.pow(lngOffset, 2)) * 111).toFixed(1);
+
+            return {
+                id: index + 1,
+                name: name,
+                status: "OPEN",
+                statusColor: "#4CAF50",
+                statusBg: "#E8F5E9",
+                distance: `${distance} km away`,
+                time: `${Math.ceil(distance * 10)} mins`,
+                address: `Near your location`,
+                phone: `555-010${index}`,
+                coordinates: {
+                    latitude: lat + latOffset,
+                    longitude: lng + lngOffset
+                },
+                type: types[index]
+            };
+        });
+        newClinics.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+        setClinics(newClinics);
+    };
 
     const filters = ["Open Now", "TB Screening", "Rating", "Distance"];
 
-    // Function to open Google Maps or Apple Maps
     const openMaps = (lat, lng, label) => {
         const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
         const latLng = `${lat},${lng}`;
-        const labelStr = label || 'Clinic';
+        const labelStr = label || 'Metric';
         const url = Platform.select({
             ios: `${scheme}${labelStr}@${latLng}`,
             android: `${scheme}${latLng}(${labelStr})`
         });
-
         Linking.openURL(url);
     };
 
@@ -69,15 +148,14 @@ const NearbyClinicsScreen = ({ navigation }) => {
         Linking.openURL(`tel:${phoneNumber}`);
     };
 
-    const openSearchInMaps = () => {
-        // Opens maps searching for 'TB clinics' nearby
-        const query = "TB clinics near me";
-        const url = Platform.select({
-            ios: `maps:0,0?q=${query}`,
-            android: `geo:0,0?q=${query}`
-        });
-        Linking.openURL(url);
-    };
+    if (loading) {
+        return (
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={{ marginTop: 10 }}>Finding nearby clinics...</Text>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -97,7 +175,9 @@ const NearbyClinicsScreen = ({ navigation }) => {
                 {/* Location Bar */}
                 <View style={styles.locationBar}>
                     <Ionicons name="location-sharp" size={20} color={colors.primary} />
-                    <Text style={styles.locationText}>Brooklyn, NY</Text>
+                    <Text style={styles.locationText}>
+                        {errorMsg ? "Location Unavailable" : "Current Location"}
+                    </Text>
                 </View>
 
                 {/* Filter Chips */}
@@ -121,61 +201,45 @@ const NearbyClinicsScreen = ({ navigation }) => {
                             ]}>
                                 {filter}
                             </Text>
-                            <Ionicons
-                                name="chevron-down"
-                                size={12}
-                                color={index === 0 ? "#FFF" : "#666"}
-                                style={{ marginLeft: 4 }}
-                            />
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
 
-                {/* Interactive Map Entry Point */}
-                <TouchableOpacity
-                    style={styles.mapContainer}
-                    activeOpacity={0.9}
-                    onPress={openSearchInMaps}
-                >
-                    <Image
-                        source={{ uri: `https://maps.googleapis.com/maps/api/staticmap?center=Brooklyn,NY&zoom=13&size=600x300&maptype=roadmap&markers=color:red%7Clabel:C%7C40.7128,-74.0060&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}` }}
-                        style={styles.mapBackground}
-                        resizeMode="cover"
-                    />
-                    {/* Fallback overlay if API key invalid (likely for demo) */}
-                    <View style={[styles.mapBackground, { position: 'absolute', backgroundColor: 'rgba(227, 242, 253, 0.5)' }]}>
-                        {/* Map Grid Lines */}
-                        <View style={styles.mapGridHorizontal} />
-                        <View style={styles.mapGridVertical} />
-
-                        {/* Dummy Pins */}
-                        <View style={[styles.mapPin, { top: 40, left: 100 }]}>
-                            <MaterialCommunityIcons name="map-marker" size={32} color={colors.primary} />
+                {/* Interactive Map View */}
+                <View style={styles.mapContainer}>
+                    {location ? (
+                        <MapView
+                            provider={PROVIDER_GOOGLE}
+                            style={styles.map}
+                            initialRegion={{
+                                latitude: location.latitude,
+                                longitude: location.longitude,
+                                latitudeDelta: 0.04,
+                                longitudeDelta: 0.04,
+                            }}
+                            showsUserLocation={true}
+                            showsMyLocationButton={true}
+                        >
+                            {clinics.map(clinic => (
+                                <Marker
+                                    key={clinic.id}
+                                    coordinate={clinic.coordinates}
+                                    title={clinic.name}
+                                    description={clinic.type}
+                                    pinColor={colors.primary}
+                                />
+                            ))}
+                        </MapView>
+                    ) : (
+                        <View style={styles.mapError}>
+                            <Text>{errorMsg || "Map loading..."}</Text>
                         </View>
-                        <View style={[styles.mapPin, { top: 90, left: 220 }]}>
-                            <MaterialCommunityIcons name="map-marker" size={32} color="#FF5252" />
-                        </View>
-                        <View style={[styles.mapPin, { top: 120, left: 60 }]}>
-                            <MaterialCommunityIcons name="map-marker" size={32} color={colors.primary} />
-                        </View>
-
-                        {/* Location Button */}
-                        <View style={styles.myLocationBtn}>
-                            <Ionicons name="locate" size={20} color={colors.primary} />
-                        </View>
-                    </View>
-                    <View style={styles.mapLabelOverlay}>
-                        <Text style={styles.mapOverlayText}>Open in Google Maps</Text>
-                        <Ionicons name="open-outline" size={16} color="#555" style={{ marginLeft: 4 }} />
-                    </View>
-                </TouchableOpacity>
+                    )}
+                </View>
 
                 {/* List Header */}
                 <View style={styles.listHeader}>
                     <Text style={styles.listTitle}>Clinics near you</Text>
-                    <TouchableOpacity onPress={openSearchInMaps}>
-                        <Text style={styles.viewAllText}>View Map</Text>
-                    </TouchableOpacity>
                 </View>
 
                 {/* Clinics List */}
@@ -185,10 +249,10 @@ const NearbyClinicsScreen = ({ navigation }) => {
                             {/* Card Header */}
                             <TouchableOpacity
                                 style={styles.clinicHeader}
-                                onPress={() => openMaps(clinic.coordinates.lat, clinic.coordinates.lng, clinic.name)}
+                                onPress={() => openMaps(clinic.coordinates.latitude, clinic.coordinates.longitude, clinic.name)}
                             >
-                                <View>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ flex: 1 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                                         <Text style={styles.clinicName}>{clinic.name}</Text>
                                         <View style={[styles.statusBadge, { backgroundColor: clinic.statusBg }]}>
                                             <Text style={[styles.statusText, { color: clinic.statusColor }]}>{clinic.status}</Text>
@@ -200,17 +264,8 @@ const NearbyClinicsScreen = ({ navigation }) => {
                                     </View>
                                 </View>
                                 <View style={styles.clinicIconBox}>
-                                    <MaterialCommunityIcons name="medical-bag" size={20} color={colors.primary} />
+                                    <MaterialCommunityIcons name="hospital-building" size={24} color={colors.primary} />
                                 </View>
-                            </TouchableOpacity>
-
-                            {/* Address */}
-                            <TouchableOpacity
-                                style={styles.addressRow}
-                                onPress={() => openMaps(clinic.coordinates.lat, clinic.coordinates.lng, clinic.name)}
-                            >
-                                <Ionicons name="business" size={14} color="#999" />
-                                <Text style={styles.addressText}>{clinic.address}</Text>
                             </TouchableOpacity>
 
                             {/* Actions */}
@@ -220,13 +275,14 @@ const NearbyClinicsScreen = ({ navigation }) => {
                                     onPress={() => handleCall(clinic.phone)}
                                 >
                                     <Ionicons name="call" size={18} color="#FFF" style={{ marginRight: 8 }} />
-                                    <Text style={styles.callButtonText}>Call Clinic</Text>
+                                    <Text style={styles.callButtonText}>Call</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.directionButton}
-                                    onPress={() => openMaps(clinic.coordinates.lat, clinic.coordinates.lng, clinic.name)}
+                                    onPress={() => openMaps(clinic.coordinates.latitude, clinic.coordinates.longitude, clinic.name)}
                                 >
-                                    <MaterialCommunityIcons name="directions" size={22} color="#333" />
+                                    <Text style={styles.directionText}>Directions</Text>
+                                    <MaterialCommunityIcons name="directions" size={18} color={colors.primary} style={{ marginLeft: 4 }} />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -256,15 +312,9 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#000',
     },
-    backButton: {
-        padding: 4,
-    },
-    bellButton: {
-        padding: 4,
-    },
-    scrollContent: {
-        paddingBottom: 20,
-    },
+    backButton: { padding: 4 },
+    bellButton: { padding: 4 },
+    scrollContent: { paddingBottom: 20 },
     locationBar: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -284,12 +334,8 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
         marginBottom: 20,
     },
-    filtersContent: {
-        paddingRight: 20,
-    },
+    filtersContent: { paddingRight: 20 },
     filterChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
@@ -304,78 +350,32 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderColor: '#E0E0E0',
     },
-    filterText: {
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    activeFilterText: {
-        color: '#FFFFFF',
-    },
-    inactiveFilterText: {
-        color: '#333',
-    },
+    filterText: { fontSize: 13, fontWeight: '600' },
+    activeFilterText: { color: '#FFFFFF' },
+    inactiveFilterText: { color: '#333' },
+
+    // Map Styles
     mapContainer: {
         marginHorizontal: 20,
-        height: 180,
+        height: 250, // Taller map
         borderRadius: 16,
         overflow: 'hidden',
         marginBottom: 24,
-        position: 'relative',
+        borderWidth: 1,
+        borderColor: '#EEE'
     },
-    mapBackground: {
+    map: {
         flex: 1,
-        backgroundColor: '#E3F2FD', // Light blue map water/bg
-        position: 'relative',
-    },
-    mapGridHorizontal: {
-        position: 'absolute',
-        top: '40%',
         width: '100%',
-        height: 4,
-        backgroundColor: '#FFFFFF',
-    },
-    mapGridVertical: {
-        position: 'absolute',
-        left: '60%',
         height: '100%',
-        width: 4,
-        backgroundColor: '#FFFFFF',
     },
-    mapPin: {
-        position: 'absolute',
-    },
-    mapLabelOverlay: {
-        position: 'absolute',
-        top: 10,
-        left: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.8)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    mapOverlayText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#555',
-    },
-    myLocationBtn: {
-        position: 'absolute',
-        bottom: 12,
-        right: 12,
-        backgroundColor: '#FFFFFF',
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+    mapError: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        backgroundColor: '#F0F0F0'
     },
+
     listHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -388,14 +388,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#000',
     },
-    viewAllText: {
-        fontSize: 14,
-        color: colors.primary,
-        fontWeight: '600',
-    },
-    clinicsList: {
-        paddingHorizontal: 20,
-    },
+    clinicsList: { paddingHorizontal: 20 },
     clinicCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
@@ -413,7 +406,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 8,
+        marginBottom: 12,
     },
     clinicName: {
         fontSize: 16,
@@ -425,7 +418,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 4,
-        alignSelf: 'center',
+        marginTop: 2
     },
     statusText: {
         fontSize: 10,
@@ -435,7 +428,7 @@ const styles = StyleSheet.create({
     clinicMeta: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 4,
+        marginTop: 6,
     },
     metaText: {
         fontSize: 12,
@@ -443,33 +436,23 @@ const styles = StyleSheet.create({
         marginLeft: 4,
     },
     clinicIconBox: {
-        width: 36,
-        height: 36,
+        width: 40,
+        height: 40,
         borderRadius: 8,
         backgroundColor: '#E1F5FE',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    addressRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    addressText: {
-        fontSize: 12,
-        color: '#777',
-        marginLeft: 6,
-        flex: 1,
-    },
     cardActions: {
         flexDirection: 'row',
         gap: 12,
+        marginTop: 10
     },
     callButton: {
         flex: 1,
         backgroundColor: colors.primary,
         borderRadius: 8,
-        paddingVertical: 12,
+        paddingVertical: 10,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
@@ -480,12 +463,20 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     directionButton: {
-        width: 48,
-        backgroundColor: '#F5F5F5',
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: colors.primary,
         borderRadius: 8,
+        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
     },
+    directionText: {
+        color: colors.primary,
+        fontWeight: 'bold',
+        fontSize: 14
+    }
 });
 
 export default NearbyClinicsScreen;
