@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 const MedicalDisclaimerScreen = ({ navigation }) => {
+    const { t } = useTranslation();
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
@@ -12,7 +15,7 @@ const MedicalDisclaimerScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Medical Disclaimer</Text>
+                <Text style={styles.headerTitle}>{t('medical_title')}</Text>
                 <View style={{ width: 28 }} />
             </View>
 
@@ -27,28 +30,28 @@ const MedicalDisclaimerScreen = ({ navigation }) => {
 
                 {/* Main Content Card */}
                 <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Important Information</Text>
+                    <Text style={styles.cardTitle}>{t('medical_info_title')}</Text>
                     <Text style={styles.paragraph}>
-                        TB-SCAN is a screening tool designed to provide a preliminary assessment of tuberculosis risk based on cough audio analysis.
+                        {t('medical_desc_1')}
                     </Text>
 
                     {/* Warning Box */}
                     <View style={styles.warningBox}>
-                        <Text style={styles.warningTitle}>WARNING</Text>
+                        <Text style={styles.warningTitle}>{t('medical_warning_title')}</Text>
                         <Text style={styles.warningText}>
-                            This application is <Text style={{ fontWeight: 'bold' }}>not a substitute</Text> for professional medical diagnosis, clinical advice, or treatment.
+                            {t('medical_warning_text')}
                         </Text>
                     </View>
 
                     <Text style={styles.paragraph}>
-                        If you are experiencing severe symptoms, please consult a qualified healthcare professional or visit a clinic immediately. Never disregard professional medical advice because of something you have read or interpreted through this app.
+                        {t('medical_desc_2')}
                     </Text>
 
                     {/* Checkbox Agreement Text */}
                     <View style={styles.agreementRow}>
                         <MaterialCommunityIcons name="shield-check" size={20} color={colors.primary} style={{ marginTop: 2 }} />
                         <Text style={styles.agreementText}>
-                            By proceeding, you acknowledge that you have read and understood the nature of this screening tool.
+                            {t('medical_agreement')}
                         </Text>
                     </View>
 
@@ -57,11 +60,11 @@ const MedicalDisclaimerScreen = ({ navigation }) => {
                         style={styles.understandButton}
                         onPress={() => navigation.goBack()}
                     >
-                        <Text style={styles.buttonText}>I Understand</Text>
+                        <Text style={styles.buttonText}>{t('medical_understand')}</Text>
                         <Ionicons name="checkmark-circle" size={20} color="#FFF" style={{ marginLeft: 8 }} />
                     </TouchableOpacity>
 
-                    <Text style={styles.footerText}>TB-SCAN HEALTH SYSTEMS</Text>
+                    <Text style={styles.footerText}>{t('medical_footer')}</Text>
                 </View>
 
             </ScrollView>

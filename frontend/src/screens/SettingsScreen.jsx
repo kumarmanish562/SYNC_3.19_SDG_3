@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { auth } from '../services/firebaseConfig';
+import { useTranslation } from 'react-i18next';
 import { signOut } from 'firebase/auth';
 
 const SettingsScreen = ({ navigation }) => {
+    const { t } = useTranslation();
 
     // Helper component for settings item
     const SettingsItem = ({ icon, title, subtitle, onPress, showToggle }) => (
@@ -44,7 +46,7 @@ const SettingsScreen = ({ navigation }) => {
             // Reset navigation queue and go to Auth
             navigation.reset({
                 index: 0,
-                routes: [{ name: 'Auth' }],
+                routes: [{ name: 'Welcome' }],
             });
         } catch (error) {
             console.error("Logout Error:", error);
@@ -58,66 +60,66 @@ const SettingsScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Settings</Text>
+                <Text style={styles.headerTitle}>{t('nav_settings')}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
                 {/* GENERAL Section */}
-                <Text style={styles.sectionHeader}>GENERAL</Text>
+                <Text style={styles.sectionHeader}>{t('settings_general')}</Text>
 
                 <SettingsItem
                     icon="globe-outline"
-                    title="Language"
-                    subtitle="English (United States)"
+                    title={t('settings_language')}
+                    subtitle={t('settings_language_current') || "English"}
                     onPress={() => navigation.navigate('LanguageSelection')}
                 />
 
                 <SettingsItem
                     icon="notifications-outline"
-                    title="Notifications"
-                    subtitle="Enabled"
+                    title={t('settings_notifications')}
+                    subtitle={t('settings_enabled')}
                     onPress={() => navigation.navigate('Notifications')}
                 />
 
                 {/* INFORMATION & SUPPORT Section */}
-                <Text style={styles.sectionHeader}>INFORMATION & SUPPORT</Text>
+                <Text style={styles.sectionHeader}>{t('settings_info_support')}</Text>
 
                 <SettingsItem
                     icon="help-circle-outline"
-                    title="Help & Support"
+                    title={t('settings_help_support')}
                     onPress={() => navigation.navigate('HelpSupport')}
                 />
 
                 <SettingsItem
                     icon="information-circle-outline"
-                    title="About TB-SCAN"
+                    title={t('settings_about')}
                     onPress={() => navigation.navigate('About')}
                 />
 
                 <SettingsItem
                     icon="shield-checkmark-outline"
-                    title="Medical Disclaimer"
+                    title={t('settings_medical')}
                     onPress={() => navigation.navigate('MedicalDisclaimer')}
                 />
 
                 <SettingsItem
                     icon="lock-closed-outline"
-                    title="Privacy Policy"
+                    title={t('settings_privacy')}
                     onPress={() => navigation.navigate('PrivacyPolicy')}
                 />
 
                 {/* Logout Button */}
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Ionicons name="log-out-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
-                    <Text style={styles.logoutText}>Logout</Text>
+                    <Text style={styles.logoutText}>{t('settings_logout')}</Text>
                 </TouchableOpacity>
 
                 {/* Version Footer */}
                 <View style={styles.footerContainer}>
                     <Text style={styles.versionText}>VERSION 2.4.0</Text>
-                    <Text style={styles.copyrightText}>© 2024 TB-SCAN Global Health Initiative</Text>
+                    <Text style={styles.copyrightText}>{t('copyright')}</Text>
                 </View>
 
             </ScrollView>

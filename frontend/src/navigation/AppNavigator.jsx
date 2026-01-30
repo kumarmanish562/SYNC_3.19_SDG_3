@@ -28,6 +28,7 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import AuthScreen from '../screens/AuthScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import OtpVerificationScreen from '../screens/OtpVerificationScreen';
+import InsightDetailScreen from '../screens/InsightDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -63,6 +64,7 @@ const AppNavigator = () => {
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="InsightDetail" component={InsightDetailScreen} />
             {/* Add other screens here as needed, e.g., Login, Dashboard */}
         </Stack.Navigator>
     );

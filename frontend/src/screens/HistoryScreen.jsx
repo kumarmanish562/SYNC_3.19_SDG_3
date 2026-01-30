@@ -5,11 +5,13 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { fetchHistory } from '../services/api';
 import { auth } from '../services/firebaseConfig';
+import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 const HistoryScreen = ({ navigation }) => {
+    const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
     const [historyData, setHistoryData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ const HistoryScreen = ({ navigation }) => {
     };
 
     const formatDate = (isoString) => {
-        if (!isoString) return 'Unknown Date';
+        if (!isoString) return t('unknown_date');
         const date = new Date(isoString);
         return date.toLocaleDateString('en-US', {
             month: 'short',
@@ -77,7 +79,7 @@ const HistoryScreen = ({ navigation }) => {
                             <Text style={[styles.riskText, { color: riskColor }]}>{item.status || "UNKNOWN"}</Text>
                         </View>
 
-                        <Text style={styles.probabilityText}>{item.score}% Probability</Text>
+                        <Text style={styles.probabilityText}>{item.score}% {t('probability')}</Text>
                         <Text style={styles.dateText}>{formatDate(item.timestamp)}</Text>
 
                         <TouchableOpacity
@@ -88,7 +90,7 @@ const HistoryScreen = ({ navigation }) => {
                                 timestamp: item.timestamp
                             })}
                         >
-                            <Text style={styles.viewDetailsText}>View Details</Text>
+                            <Text style={styles.viewDetailsText}>{t('view_details')}</Text>
                             <Ionicons name="chevron-forward" size={14} color={colors.primary} />
                         </TouchableOpacity>
                     </View>
@@ -114,7 +116,7 @@ const HistoryScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Test History</Text>
+                <Text style={styles.headerTitle}>{t('test_history')}</Text>
                 <TouchableOpacity style={styles.filterButton} onPress={loadHistory}>
                     <Ionicons name="refresh" size={24} color={colors.primary} />
                 </TouchableOpacity>
@@ -134,7 +136,7 @@ const HistoryScreen = ({ navigation }) => {
                     <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by date or result..."
+                        placeholder={t('search_placeholder')}
                         placeholderTextColor="#999"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -144,19 +146,19 @@ const HistoryScreen = ({ navigation }) => {
                 {loading ? (
                     <View style={styles.loaderContainer}>
                         <ActivityIndicator size="large" color={colors.primary} />
-                        <Text style={styles.loadingText}>Loading history...</Text>
+                        <Text style={styles.loadingText}>{t('loading_history')}</Text>
                     </View>
                 ) : filteredData.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <MaterialCommunityIcons name="history" size={60} color="#DDD" />
-                        <Text style={styles.emptyText}>No test history found.</Text>
-                        <Text style={styles.emptySubText}>Records will appear here after you analyze a cough.</Text>
+                        <Text style={styles.emptyText}>{t('no_history')}</Text>
+                        <Text style={styles.emptySubText}>{t('history_empty_sub')}</Text>
                     </View>
                 ) : (
                     <>
                         {/* We could split by date (Recent vs Last Month) but for now just a list is fine */}
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>ALL TESTS ({filteredData.length})</Text>
+                            <Text style={styles.sectionTitle}>{t('all_tests')} ({filteredData.length})</Text>
                         </View>
                         {filteredData.map(renderTestCard)}
                     </>

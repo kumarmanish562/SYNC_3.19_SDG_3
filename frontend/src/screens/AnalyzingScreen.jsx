@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
+
+// Force rebuild 2
 
 const { width } = Dimensions.get('window');
 
@@ -9,6 +12,7 @@ import { analyzeCough } from '../services/api';
 import { auth } from '../services/firebaseConfig';
 
 const AnalyzingScreen = ({ route, navigation }) => {
+    const { t } = useTranslation();
     const { audioUri, fileMetadata } = route.params || {};
 
     useEffect(() => {
@@ -84,13 +88,13 @@ const AnalyzingScreen = ({ route, navigation }) => {
 
                 {/* Text Content */}
                 <View style={styles.textContainer}>
-                    <Text style={styles.title}>Analyzing Cough Sample...</Text>
-                    <Text style={styles.subtitle}>This may take a few seconds</Text>
+                    <Text style={styles.title}>{t('analyzing_title')}</Text>
+                    <Text style={styles.subtitle}>{t('analyzing_subtitle')}</Text>
                 </View>
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>POWERED BY TB-SCAN AI</Text>
+                    <Text style={styles.footerText}>{t('powered_by')}</Text>
                 </View>
             </View>
         </SafeAreaView>

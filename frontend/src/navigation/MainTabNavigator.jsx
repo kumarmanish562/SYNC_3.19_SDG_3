@@ -3,6 +3,7 @@ import { View, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import HomeScreen from '../screens/HomeScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -13,6 +14,8 @@ const Tab = createBottomTabNavigator();
 
 const MainTabNavigator = () => {
     const navigation = useNavigation();
+    const { t } = useTranslation();
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -53,12 +56,20 @@ const MainTabNavigator = () => {
                 }
             })}
         >
-            <Tab.Screen name="Home" component={HomeScreen} />
-            <Tab.Screen name="History" component={HistoryScreen} />
+            <Tab.Screen
+                name="Home"
+                component={HomeScreen}
+                options={{ tabBarLabel: t('nav_home') }}
+            />
+            <Tab.Screen
+                name="History"
+                component={HistoryScreen}
+                options={{ tabBarLabel: t('nav_history') }}
+            />
 
             <Tab.Screen
                 name="RecordAction"
-                component={View} // Placeholder, action handled by button
+                component={View} // Placeholder
                 options={{
                     tabBarLabel: () => null,
                     tabBarButton: (props) => (
@@ -91,8 +102,16 @@ const MainTabNavigator = () => {
                 }}
             />
 
-            <Tab.Screen name="Settings" component={SettingsScreen} />
-            <Tab.Screen name="Profile" component={ProfileScreen} />
+            <Tab.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{ tabBarLabel: t('nav_settings') }}
+            />
+            <Tab.Screen
+                name="Profile"
+                component={ProfileScreen}
+                options={{ tabBarLabel: t('nav_profile') }}
+            />
         </Tab.Navigator>
     );
 };

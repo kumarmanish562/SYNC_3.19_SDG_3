@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 const ResultScreen = ({ navigation, route }) => {
+    const { t } = useTranslation();
     // Get params from navigation
     const { score = 15, status } = route.params || {};
 
@@ -14,16 +16,16 @@ const ResultScreen = ({ navigation, route }) => {
     const isLowRisk = riskScore < 30; // 0-30 Low, 31-70 Medium, 71+ High
     const isHighRisk = riskScore > 70;
 
-    let riskLabel = "Low Risk";
+    let riskLabel = t('risk_low');
     let riskColor = "#2ECC71"; // Green
     let riskBg = "#E8F8F5";
 
     if (isHighRisk) {
-        riskLabel = "High Risk";
+        riskLabel = t('risk_high');
         riskColor = "#FF5252";
         riskBg = "#FFEBEE";
     } else if (!isLowRisk) {
-        riskLabel = "Medium Risk";
+        riskLabel = t('risk_medium');
         riskColor = "#FF9800";
         riskBg = "#FFF3E0";
     }
@@ -36,7 +38,7 @@ const ResultScreen = ({ navigation, route }) => {
     const { timestamp } = route.params || {};
     const resultDate = timestamp ? new Date(timestamp) : new Date();
     const analysisDate = resultDate.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
-    const method = "AI Acoustic Analysis";
+    const method = t('method_value');
 
     return (
         <SafeAreaView style={styles.container}>
@@ -45,7 +47,7 @@ const ResultScreen = ({ navigation, route }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Screening Result</Text>
+                <Text style={styles.headerTitle}>{t('result_header')}</Text>
                 <View style={{ width: 28 }} />
             </View>
 
@@ -54,23 +56,11 @@ const ResultScreen = ({ navigation, route }) => {
                 <View style={styles.scoreSection}>
                     {/* 
                       Simulating a progress ring without SVG:
-                      We'll just use a heavy border. To show "15%" specifically as a partial arc 
-                      is difficult without SVG or specialized libraries.
-                      We will use a full ring colored by risk level for now, 
-                      or a static trick with two semi-circles if needed.
-                      For simplicity and robustness, we use a solid ring color-coded to risk.
                     */}
                     <View style={styles.ringContainer}>
                         <View style={[styles.ring, { borderColor: '#E0E0E0' }]}>
                             {/* Background Ring */}
                         </View>
-                        {/* 
-                           A hack for partial progress:
-                           We can overlay a rotated semi-circle. 
-                           Since 15% is small, we can just show a top-right segment if we want, 
-                           but a consistent colored ring is cleaner than a broken hack.
-                           Let's stick to a colored ring that indicates status.
-                        */}
                         <View style={[styles.ringOverlay, {
                             borderTopColor: colors.primary,
                             borderRightColor: colors.primary,
@@ -78,7 +68,7 @@ const ResultScreen = ({ navigation, route }) => {
                         }]} />
 
                         <View style={styles.scoreTextContainer}>
-                            <Text style={styles.scoreLabel}>RISK SCORE</Text>
+                            <Text style={styles.scoreLabel}>{t('risk_score')}</Text>
                             <Text style={styles.scoreValue}>{riskScore}%</Text>
                         </View>
                     </View>
@@ -96,25 +86,25 @@ const ResultScreen = ({ navigation, route }) => {
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <MaterialCommunityIcons name="information" size={20} color={colors.primary} />
-                        <Text style={styles.cardTitle}>Result Explanation</Text>
+                        <Text style={styles.cardTitle}>{t('result_explanation')}</Text>
                     </View>
                     <Text style={styles.cardBody}>
-                        Based on your symptoms and AI-powered cough analysis, your risk for Tuberculosis is currently low.
+                        {isLowRisk ? t('result_body_low') : (isHighRisk ? "High risk detected." : "Medium risk detected.")}
                     </Text>
                     <View style={styles.divider} />
                     <Text style={styles.cardDisclaimer}>
-                        Disclaimer: This is a screening tool, not a diagnosis. If you have a persistent cough or fever, please consult a medical professional.
+                        {t('disclaimer')}
                     </Text>
                 </View>
 
                 {/* Details Row */}
                 <View style={styles.detailsRow}>
                     <View style={styles.detailCard}>
-                        <Text style={styles.detailLabel}>ANALYSIS DATE</Text>
+                        <Text style={styles.detailLabel}>{t('analysis_date')}</Text>
                         <Text style={styles.detailValue}>{analysisDate}</Text>
                     </View>
                     <View style={styles.detailCard}>
-                        <Text style={styles.detailLabel}>METHOD</Text>
+                        <Text style={styles.detailLabel}>{t('method')}</Text>
                         <Text style={styles.detailValue}>{method}</Text>
                     </View>
                 </View>
@@ -126,7 +116,7 @@ const ResultScreen = ({ navigation, route }) => {
                         onPress={() => navigation.navigate('ReportDetails')}
                     >
                         <Ionicons name="document-text-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                        <Text style={styles.primaryBtnText}>View Detailed Report</Text>
+                        <Text style={styles.primaryBtnText}>{t('view_detailed_report')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -134,7 +124,7 @@ const ResultScreen = ({ navigation, route }) => {
                         onPress={() => navigation.navigate('NearbyClinics')}
                     >
                         <Ionicons name="location-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-                        <Text style={styles.secondaryBtnText}>Find Nearby Clinics</Text>
+                        <Text style={styles.secondaryBtnText}>{t('find_nearby_clinics')}</Text>
                     </TouchableOpacity>
                 </View>
 

@@ -4,7 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
+import { useTranslation } from 'react-i18next';
+
 const NotificationsScreen = ({ navigation }) => {
+    const { t } = useTranslation();
     const [isEnabled, setIsEnabled] = useState(true);
 
     const toggleSwitch = () => setIsEnabled(previousState => !previousState);
@@ -15,13 +18,13 @@ const NotificationsScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notifications</Text>
+                <Text style={styles.headerTitle}>{t('notif_title')}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
             <View style={styles.content}>
                 <View style={styles.itemContainer}>
-                    <Text style={styles.itemTitle}>Enable Notifications</Text>
+                    <Text style={styles.itemTitle}>{t('notif_enable')}</Text>
                     <Switch
                         trackColor={{ false: "#767577", true: colors.primary }}
                         thumbColor={isEnabled ? "#f4f3f4" : "#f4f3f4"}
@@ -31,7 +34,7 @@ const NotificationsScreen = ({ navigation }) => {
                     />
                 </View>
                 <Text style={styles.description}>
-                    Turning this on allows TB-SCAN to send you important updates and reminders about your health screenings.
+                    {t('notif_desc')}
                 </Text>
             </View>
         </SafeAreaView>

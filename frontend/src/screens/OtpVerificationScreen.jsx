@@ -7,9 +7,12 @@ import { auth, db } from '../services/firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 
+import { useTranslation } from 'react-i18next';
+
 const OtpVerificationScreen = ({ route, navigation }) => {
     // Get params passed from AuthScreen
     const { email, password, name, mobile, isLogin } = route.params;
+    const { t } = useTranslation();
 
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [loading, setLoading] = useState(false);
@@ -38,7 +41,7 @@ const OtpVerificationScreen = ({ route, navigation }) => {
     const handleVerify = async () => {
         const otpCode = getOtpString();
         if (otpCode.length !== 6) {
-            Alert.alert("Error", "Please enter valid 6-digit code");
+            Alert.alert(t('alert_error'), t('alert_invalid_otp_len'));
             return;
         }
 
@@ -75,9 +78,9 @@ const OtpVerificationScreen = ({ route, navigation }) => {
                         createdAt: new Date().toISOString()
                     });
 
-                    Alert.alert("Success", "Account Verified & Created!", [
+                    Alert.alert(t('alert_success'), t('alert_account_verified'), [
                         {
-                            text: "Go Home",
+                            text: t('go_home'),
                             onPress: () => navigation.reset({
                                 index: 0,
                                 routes: [{ name: 'MainTabs' }],
@@ -86,12 +89,12 @@ const OtpVerificationScreen = ({ route, navigation }) => {
                     ]);
                 }
             } else {
-                Alert.alert("Error", "Invalid Code");
+                Alert.alert(t('alert_error'), t('alert_invalid_code'));
             }
 
         } catch (error) {
             console.error(error);
-            Alert.alert("Verification Failed", error.message || "Network Error");
+            Alert.alert(t('alert_verification_failed'), error.message || t('alert_network_error'));
         } finally {
             setLoading(false);
         }
@@ -108,8 +111,8 @@ const OtpVerificationScreen = ({ route, navigation }) => {
                     <Ionicons name="shield-checkmark" size={60} color={colors.primary} />
                 </View>
 
-                <Text style={styles.title}>Verification</Text>
-                <Text style={styles.subtitle}>Enter the 6-digit code sent to</Text>
+                <Text style={styles.title}>{t('otp_title')}</Text>
+                <Text style={styles.subtitle}>{t('otp_subtitle')}</Text>
                 <Text style={styles.emailText}>{email}</Text>
 
                 <View style={styles.otpContainer}>
@@ -131,14 +134,14 @@ const OtpVerificationScreen = ({ route, navigation }) => {
                     onPress={handleVerify}
                     disabled={loading}
                 >
-                    <Text style={styles.verifyButtonText}>{loading ? "Verifying..." : "Verify & Continue"}</Text>
+                    <Text style={styles.verifyButtonText}>{loading ? t('otp_verifying') : t('otp_verify_continue')}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.resendContainer}>
-                    <Text style={styles.resendText}>Didn't receive code? </Text>
+                    <Text style={styles.resendText}>{t('otp_resend_q')}</Text>
                     <TouchableOpacity disabled={timer > 0}>
                         <Text style={[styles.resendLink, timer > 0 && { color: '#999' }]}>
-                            {timer > 0 ? `Resend in ${timer}s` : "Resend"}
+                            {timer > 0 ? `${t('otp_resend')} in ${timer}s` : t('otp_resend')}
                         </Text>
                     </TouchableOpacity>
                 </View>

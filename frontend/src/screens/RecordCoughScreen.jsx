@@ -4,15 +4,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 import * as DocumentPicker from 'expo-document-picker';
 
 const RecordCoughScreen = ({ navigation }) => {
+    const { t } = useTranslation();
     const [recording, setRecording] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [duration, setDuration] = useState(0);
+
+    // ... existing logic ...
 
     useEffect(() => {
         let interval;
@@ -128,12 +132,12 @@ const RecordCoughScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>TB-SCAN</Text>
+                <Text style={styles.headerTitle}>SwaaS</Text>
                 <View style={{ width: 28 }} />
             </View>
 
             <View style={styles.content}>
-                <Text style={styles.title}>{isRecording ? "Recording..." : "Record Your Cough"}</Text>
+                <Text style={styles.title}>{isRecording ? t('record_title_recording') : t('record_title_start')}</Text>
                 <View style={styles.titleUnderline} />
 
                 {/* Record Button */}
@@ -157,16 +161,16 @@ const RecordCoughScreen = ({ navigation }) => {
 
                 <View style={styles.instructionsContainer}>
                     <Text style={styles.mainInstruction}>
-                        {isRecording ? "Cough naturally near the mic" : "Tap to start recording"}
+                        {isRecording ? t('record_instruction_recording') : t('record_instruction_start')}
                     </Text>
                     <Text style={styles.subInstruction}>
-                        {isRecording ? "Tap again to stop" : "Hold for 5 seconds for best results"}
+                        {isRecording ? t('record_sub_recording') : t('record_sub_start')}
                     </Text>
 
                     {!isRecording && (
                         <TouchableOpacity style={styles.uploadButton} onPress={pickAudio}>
                             <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
-                            <Text style={styles.uploadButtonText}>Upload Audio File</Text>
+                            <Text style={styles.uploadButtonText}>{t('upload_audio')}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -174,7 +178,7 @@ const RecordCoughScreen = ({ navigation }) => {
                 {/* Footer Status */}
                 <View style={styles.footerContainer}>
                     <View style={styles.statusRow}>
-                        <Text style={styles.statusLabel}>RECORDING STATUS</Text>
+                        <Text style={styles.statusLabel}>{t('status_label')}</Text>
                         <Text style={styles.timeLabel}>{(duration / 1000).toFixed(1)}s / 5s</Text>
                     </View>
                     <View style={styles.progressBarTrack}>

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { auth, db } from '../services/firebaseConfig';
 import { ref, onValue } from 'firebase/database';
 import { useTranslation } from 'react-i18next';
+
+const { width } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
     const { t } = useTranslation();
@@ -18,21 +20,15 @@ const HomeScreen = ({ navigation }) => {
         if (currentUser) {
             setUserName(currentUser.displayName || currentUser.email.split('@')[0] || 'User');
 
-            // Real-time listener for reports
             const reportsRef = ref(db, 'reports/' + currentUser.uid);
             const unsubscribe = onValue(reportsRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    // Convert object to array
                     const reports = Object.keys(data).map(key => ({
                         id: key,
                         ...data[key]
                     }));
-
-                    // Sort by timestamp desc
                     reports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-                    // Take top 5
                     setRecentActivity(reports.slice(0, 5));
                 } else {
                     setRecentActivity([]);
@@ -46,14 +42,14 @@ const HomeScreen = ({ navigation }) => {
             setRecentActivity([]);
             setLoading(false);
         }
-    }, []);
+    }, [t]); // Add t as dependency if language changes re-rendering needed, though usually automatic
 
     const getRiskColor = (status) => {
         if (!status) return colors.primary;
         const lower = status.toLowerCase();
         if (lower.includes('high')) return '#FF5252';
         if (lower.includes('medium')) return '#FF9800';
-        return '#2ECC71'; // Green for Low Risk
+        return '#2ECC71';
     };
 
     const formatDateRange = (isoDate) => {
@@ -61,11 +57,12 @@ const HomeScreen = ({ navigation }) => {
         const date = new Date(isoDate);
         const month = date.toLocaleString('default', { month: 'short' });
         const day = date.getDate();
-        return `${month} ${day}`;
+        return `${month} ${day}`; // E.g., July 25
     };
 
     const renderActivityCard = (item) => {
         const riskColor = getRiskColor(item.status);
+        const dateStr = formatDateRange(item.timestamp);
 
         return (
             <TouchableOpacity
@@ -77,29 +74,40 @@ const HomeScreen = ({ navigation }) => {
                     timestamp: item.timestamp
                 })}
             >
-                <View style={styles.iconCircle}>
-                    <MaterialCommunityIcons name="clipboard-text-outline" size={24} color={colors.primary} />
+                <View style={[styles.iconCircle, { backgroundColor: riskColor + '20' }]}>
+                    <MaterialCommunityIcons name="clipboard-text-outline" size={24} color={riskColor} />
                 </View>
-                <Text style={styles.activityDate}>{formatDateRange(item.timestamp)}</Text>
+                <Text style={styles.activityDate}>{dateStr}</Text>
                 <Text style={[styles.activityStatus, { color: riskColor }]}>{item.status || 'Low Risk'}</Text>
             </TouchableOpacity>
         );
     };
 
+    // Insights Data - now using real images
     const insightsData = [
         {
             id: 1,
-            title: "Health Tips: Tuberculosis",
-            subtitle: "Learn about prevention and early detection.",
-            color: '#E0F7FA', // Light Cyan
-            image: 'lungs'
+            titleKey: "tip_1_title",
+            descKey: "tip_1_desc",
+            fullDescKey: "tip_1_full",
+            color: '#E3F2FD',
+            image: require('../../assets/tb_insight.png')
         },
         {
             id: 2,
-            title: "Understanding Your Lungs",
-            subtitle: "How to maintain healthy respiratory function.",
-            color: '#FFF3E0', // Light Orange
-            image: 'doctor'
+            titleKey: "tip_2_title",
+            descKey: "tip_2_desc",
+            fullDescKey: "tip_2_full",
+            color: '#FFF3E0',
+            image: require('../../assets/lung_insight.png')
+        },
+        {
+            id: 3,
+            titleKey: "tip_3_title",
+            descKey: "tip_3_desc",
+            fullDescKey: "tip_3_full",
+            color: '#E8F5E9',
+            image: require('../../assets/ai_insight.png')
         }
     ];
 
@@ -107,7 +115,6 @@ const HomeScreen = ({ navigation }) => {
 
     const onRefresh = () => {
         setRefreshing(true);
-        // Real-time listener handles updates, so we just simulate a brief refresh
         setTimeout(() => {
             setRefreshing(false);
         }, 1000);
@@ -123,22 +130,25 @@ const HomeScreen = ({ navigation }) => {
                 {/* Header */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.greetingText}>{t('welcome')},</Text>
+                        <Text style={styles.greetingText}>{t('hello')},</Text>
                         <Text style={styles.userNameText}>{userName}</Text>
                     </View>
                     <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                        {/* Placeholder Avatar */}
                         <View style={styles.avatarContainer}>
-                            <Ionicons name="person" size={24} color="#FFF" />
+                            {/* Placeholder generic user image if no photoURL */}
+                            <Image
+                                source={{ uri: 'https://i.pravatar.cc/150?img=12' }}
+                                style={{ width: '100%', height: '100%' }}
+                            />
                         </View>
                     </TouchableOpacity>
                 </View>
 
                 {/* Recent Activity Section */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{t('history')}</Text>
+                    <Text style={styles.sectionTitle}>{t('recent_activity')}</Text>
                     <TouchableOpacity onPress={() => navigation.navigate('History')}>
-                        <Text style={styles.seeAllText}>See All</Text>
+                        <Text style={styles.seeAllText}>{t('see_all')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -149,42 +159,54 @@ const HomeScreen = ({ navigation }) => {
                     </ScrollView>
                 ) : (
                     <View style={styles.emptyStateContainer}>
-                        <Text style={styles.emptyStateText}>No recent scans.</Text>
+                        <Text style={styles.emptyStateText}>{t('no_recent_scan')}</Text>
                         <TouchableOpacity style={styles.startScanBtn} onPress={() => navigation.navigate('RecordCough')}>
-                            <Text style={styles.startScanText}>Start New Scan</Text>
+                            <Text style={styles.startScanText}>{t('start_new_scan')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
 
                 {/* Health Insights Section */}
                 <View style={[styles.sectionHeader, { marginTop: 24 }]}>
-                    <Text style={styles.sectionTitle}>Health Insights</Text>
+                    <Text style={styles.sectionTitle}>{t('health_insights')}</Text>
                 </View>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+                {/* Vertical List of Insight Cards */}
+                <View style={styles.insightsList}>
                     {insightsData.map((item) => (
-                        <View key={item.id} style={[styles.insightCard, { backgroundColor: item.color }]}>
-                            <View style={styles.insightContent}>
-                                <Text style={styles.insightTitle}>{item.title}</Text>
-                                <Text style={styles.insightSubtitle}>{item.subtitle}</Text>
-                            </View>
-                            <View style={styles.insightImagePlaceholder}>
-                                <MaterialCommunityIcons
-                                    name={item.image === 'lungs' ? 'lungs' : 'doctor'}
-                                    size={40}
-                                    color={colors.primary}
-                                    style={{ opacity: 0.8 }}
+                        <TouchableOpacity
+                            key={item.id}
+                            style={[styles.insightBigCard, { backgroundColor: item.color }]}
+                            onPress={() => navigation.navigate('InsightDetail', {
+                                titleKey: item.titleKey,
+                                descKey: item.descKey,
+                                fullDescKey: item.fullDescKey,
+                                imageSource: item.image,
+                                color: item.color
+                            })}
+                        >
+                            {/* Illustration Area */}
+                            <View style={styles.cardImageContainer}>
+                                <Image
+                                    source={item.image}
+                                    style={{ width: 70, height: 70 }}
+                                    resizeMode="contain"
                                 />
                             </View>
-                        </View>
-                    ))}
-                    <View style={{ width: 20 }} />
-                </ScrollView>
 
-                {/* Quick Action FAB (Simulating the Mic button from the design if Tab Bar isn't updated) */}
-                {/* We won't add a floating button overlay here to avoid clashing with the tab bar if they are close, 
-                    but we'll add a 'Record' card if the user needs primary access and the tab bar is standard. 
-                    Actually, let's just stick to the content layout requested. */}
+                            {/* Text Content */}
+                            <View style={styles.cardTextContent}>
+                                <Text style={styles.cardTitle}>{t(item.titleKey)}</Text>
+                                <Text style={styles.cardSameSubtitle}>{t(item.descKey)}</Text>
+                            </View>
+
+                            {/* Arrow Button */}
+                            <View style={styles.arrowBtn}>
+                                <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </View>
 
                 <View style={{ height: 100 }} />
             </ScrollView>
@@ -198,7 +220,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
     },
     scrollContent: {
-        paddingTop: 20,
+        paddingTop: 10,
         paddingBottom: 40,
     },
     header: {
@@ -206,27 +228,27 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        marginBottom: 24,
+        marginBottom: 20,
     },
     greetingText: {
-        fontSize: 16,
+        fontSize: 18,
         color: '#333',
-        fontWeight: 'bold',
+        fontWeight: '600',
     },
     userNameText: {
-        fontSize: 24,
-        color: colors.primary, // Blue color from image
+        fontSize: 26,
+        color: '#0288D1',
         fontWeight: 'bold',
+        marginTop: 4,
     },
     avatarContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#CCC', // Placeholder gray
-        justifyContent: 'center',
-        alignItems: 'center',
-        // In real app, use <Image source={{ uri: user.photoURL }} />
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#F0F0F0',
         overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: '#E1F5FE',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -238,67 +260,65 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#000',
+        color: '#1A237E', // Darker blue
     },
     seeAllText: {
         fontSize: 14,
-        color: colors.primary,
+        color: '#0288D1',
         fontWeight: '600',
     },
     horizontalScroll: {
         paddingLeft: 20,
+        marginBottom: 10,
     },
     activityCard: {
-        width: 130,
-        height: 140,
-        backgroundColor: '#FFF',
-        borderRadius: 16,
+        width: 140,
+        height: 160,
+        backgroundColor: '#F9F9F9',
+        borderRadius: 20,
         padding: 16,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
-        // Shadow
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3,
         borderWidth: 1,
-        borderColor: '#F5F5F5',
+        borderColor: '#EEE',
     },
     iconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#E1F5FE',
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
     },
     activityDate: {
-        fontSize: 12,
+        fontSize: 14,
         color: '#333',
         fontWeight: 'bold',
-        marginBottom: 4,
+        marginBottom: 6,
     },
     activityStatus: {
         fontSize: 12,
         fontWeight: 'bold',
-        marginTop: 2,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     emptyStateContainer: {
         paddingHorizontal: 20,
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 20,
+        backgroundColor: '#F5F5F5',
+        marginHorizontal: 20,
+        borderRadius: 12,
     },
     emptyStateText: {
-        color: '#999',
+        color: '#777',
         fontSize: 14,
         marginBottom: 12,
     },
     startScanBtn: {
-        backgroundColor: colors.primary,
+        backgroundColor: '#0288D1',
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 20,
@@ -308,39 +328,53 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
     },
-    insightCard: {
-        width: 260,
-        height: 140, // Large rectangular card
-        borderRadius: 20,
-        padding: 20,
-        marginRight: 16,
+    insightsList: {
+        paddingHorizontal: 20,
+        gap: 16,
+    },
+    insightBigCard: {
+        width: '100%',
+        height: 120,
+        borderRadius: 24,
+        padding: 16,
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        overflow: 'hidden',
+        justifyContent: 'space-between',
+        marginBottom: 10,
     },
-    insightContent: {
+    cardImageContainer: {
+        width: 80,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    cardTextContent: {
         flex: 1,
-        paddingRight: 10,
+        paddingHorizontal: 12,
+        justifyContent: 'center',
     },
-    insightTitle: {
+    cardTitle: {
         fontSize: 16,
         fontWeight: 'bold',
         color: '#000',
-        marginBottom: 8,
+        marginBottom: 6,
     },
-    insightSubtitle: {
-        fontSize: 12,
+    cardSameSubtitle: {
+        fontSize: 13,
         color: '#555',
         lineHeight: 18,
     },
-    insightImagePlaceholder: {
-        width: 70,
-        height: 70,
-        // backgroundColor: 'rgba(255,255,255,0.5)',
+    arrowBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#0288D1',
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 4,
     },
 });
 

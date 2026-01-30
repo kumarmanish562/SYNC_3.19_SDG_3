@@ -4,14 +4,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
+import { useTranslation } from 'react-i18next';
+
 const MicrophoneAccessScreen = ({ navigation }) => {
+    const { t } = useTranslation();
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>TB-SCAN</Text>
+                <Text style={styles.headerTitle}>SwaaS</Text>
                 <View style={{ width: 28 }} />
             </View>
 
@@ -27,14 +31,14 @@ const MicrophoneAccessScreen = ({ navigation }) => {
                     </View>
                 </View>
 
-                <Text style={styles.title}>Microphone Access</Text>
+                <Text style={styles.title}>{t('mic_title')}</Text>
                 <Text style={styles.description}>
-                    To accurately assess your health, TB-SCAN needs to record and analyze your cough audio. Use simple background noise reduction environment if possible.
+                    {t('mic_desc')}
                 </Text>
 
                 <View style={styles.noteContainer}>
                     <Ionicons name="information-circle" size={18} color={colors.primary} style={{ marginRight: 6 }} />
-                    <Text style={styles.noteText}>ANC (Active Noise Cancellation) recommended</Text>
+                    <Text style={styles.noteText}>{t('mic_note')}</Text>
                 </View>
 
                 <View style={styles.buttonContainer}>
@@ -42,14 +46,14 @@ const MicrophoneAccessScreen = ({ navigation }) => {
                         style={styles.enableButton}
                         onPress={() => navigation.replace('RecordCough')}
                     >
-                        <Text style={styles.enableButtonText}>Enable Microphone</Text>
+                        <Text style={styles.enableButtonText}>{t('mic_enable')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.notNowButton}
                         onPress={() => navigation.goBack()}
                     >
-                        <Text style={styles.notNowButtonText}>Not Now</Text>
+                        <Text style={styles.notNowButtonText}>{t('mic_not_now')}</Text>
                     </TouchableOpacity>
                 </View>
 

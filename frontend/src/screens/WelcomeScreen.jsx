@@ -1,178 +1,226 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 
 const WelcomeScreen = ({ navigation }) => {
+    const { t } = useTranslation();
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.contentContainer}>
+        <LinearGradient
+            colors={['#E1F5FE', '#F0F4F8', '#FFFFFF']}
+            style={styles.container}
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <StatusBar barStyle="dark-content" />
+
+                {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
-                        <MaterialCommunityIcons name="lungs" size={28} color={colors.primary} />
+                        <Image
+                            source={require('../../assets/logo.png')}
+                            style={styles.logo}
+                            resizeMode="contain"
+                        />
+                        <Text style={styles.headerText}>SwaaS</Text>
                     </View>
-                    <Text style={styles.headerText}>CoughX</Text>
-                    <View style={{ width: 28 }} />
+                    <TouchableOpacity
+                        style={styles.langButton}
+                        onPress={() => navigation.navigate('LanguageSelection')}
+                    >
+                        <Ionicons name="globe-outline" size={24} color={colors.primary} />
+                    </TouchableOpacity>
                 </View>
 
-                <View style={styles.illustrationContainer}>
-                    <View style={styles.circleBackground}>
-                        <View style={styles.iconGroup}>
-                            <MaterialCommunityIcons name="qrcode-scan" size={80} color={colors.primary} />
+                {/* Main Content */}
+                <View style={styles.contentContainer}>
+                    {/* Hero Illustration */}
+                    <View style={styles.imageContainer}>
+                        <Image
+                            source={require('../../assets/welcome_hero.png')}
+                            style={styles.heroImage}
+                            resizeMode="contain"
+                        />
+                    </View>
+
+                    {/* Text Content */}
+                    <View style={styles.textSection}>
+                        <Text style={styles.title}>{t('welcome_title')}</Text>
+                        <Text style={styles.subtitle}>
+                            {t('welcome_subtitle')}
+                        </Text>
+
+                        {/* Pagination Dots */}
+                        <View style={styles.paginationContainer}>
+                            <View style={[styles.dot, styles.activeDot]} />
+                            <View style={styles.dot} />
+                            <View style={styles.dot} />
+                            <View style={styles.dot} />
                         </View>
                     </View>
-                </View>
 
-                <View style={styles.textContent}>
-                    <Text style={styles.title}>Welcome to CoughX</Text>
-                    <Text style={styles.subtitle}>
-                        AI-powered tuberculosis screening right from your phone.
-                    </Text>
+                    {/* Actions */}
+                    <View style={styles.actionContainer}>
+                        <TouchableOpacity
+                            style={styles.button}
+                            activeOpacity={0.8}
+                            onPress={() => navigation.navigate('HowItWorks')}
+                        >
+                            <LinearGradient
+                                colors={[colors.primary, '#4FC3F7']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.gradientButton}
+                            >
+                                <Text style={styles.buttonText}>{t('get_started')}</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
 
-                    <View style={styles.paginationContainer}>
-                        <View style={[styles.dot, styles.activeDot]} />
-                        <View style={styles.dot} />
-                        <View style={styles.dot} />
+                        <TouchableOpacity
+                            style={styles.skipButton}
+                            onPress={() => navigation.navigate('Auth')}
+                        >
+                            <Text style={styles.skipText}>{t('skip')}</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
-
-                <View style={styles.actionContainer}>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={() => navigation.navigate('HowItWorks')}
-                    >
-                        <Text style={styles.buttonText}>Get Started</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.skipButton}
-                        onPress={() => navigation.navigate('Auth')}
-                    >
-                        <Text style={styles.skipText}>Skip</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </SafeAreaView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
     },
-    contentContainer: {
+    safeArea: {
         flex: 1,
-        paddingHorizontal: 24,
-        justifyContent: 'space-between',
-        paddingBottom: 20,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between', // Distribute space
-        marginTop: 20,
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        paddingTop: 10,
         marginBottom: 10,
     },
+    langButton: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: '#FFF',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
     logoContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    logo: {
         width: 40,
-        alignItems: 'flex-start',
+        height: 40,
+        marginRight: 8,
     },
     headerText: {
-        fontSize: 18, // Reduced slightly to look more standard
-        fontWeight: '700',
-        color: '#000',
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#0277BD', // Darker blue to match brand
         letterSpacing: 0.5,
     },
-    illustrationContainer: {
+    contentContainer: {
+        flex: 1,
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        paddingBottom: 30,
+    },
+    imageContainer: {
         flex: 2,
         justifyContent: 'center',
         alignItems: 'center',
-        marginVertical: 20,
+        // Add some bounce or floating effect if possible, but keep simple for now
     },
-    circleBackground: {
-        width: width * 0.75, // Slightly larger
-        height: width * 0.75,
-        borderRadius: (width * 0.75) / 2,
-        backgroundColor: colors.lightBlue,
-        justifyContent: 'center',
-        alignItems: 'center',
-        // Removed overflow hidden to let badges pop if needed, but keeping simple for now
+    heroImage: {
+        width: width * 0.9,
+        height: width * 0.9,
+        maxHeight: 400,
     },
-    iconGroup: {
-        justifyContent: 'center',
+    textSection: {
         alignItems: 'center',
-    },
-    textContent: {
-        flex: 1, // Occupy remaining space
-        alignItems: 'center',
-        paddingHorizontal: 10, // Tighter padding for text
-        justifyContent: 'flex-start', // Push to top of this section
+        marginBottom: 20,
     },
     title: {
-        fontSize: 26, // Larger title
-        fontWeight: '800',
-        color: '#000',
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#0D47A1', // Deep blue
         textAlign: 'center',
         marginBottom: 12,
     },
     subtitle: {
         fontSize: 16,
-        color: colors.secondaryText,
+        color: '#546E7A', // Blue grey
         textAlign: 'center',
         lineHeight: 24,
-        marginBottom: 30, // More space before pagination
         paddingHorizontal: 20,
+        marginBottom: 24,
     },
     paginationContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 10,
     },
     dot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#E0E0E0',
+        backgroundColor: '#CFD8DC',
         marginHorizontal: 4,
     },
     activeDot: {
-        backgroundColor: colors.primary,
-        width: 24,
+        backgroundColor: '#0288D1', // Active blue
+        width: 10,
+        height: 10,
+        borderRadius: 5,
     },
     actionContainer: {
         width: '100%',
         alignItems: 'center',
-        paddingBottom: 10,
     },
     button: {
-        backgroundColor: colors.primary,
         width: '100%',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-        marginBottom: 16,
-        shadowColor: colors.primary,
+        borderRadius: 16,
+        shadowColor: '#0288D1',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+        shadowRadius: 10,
+        elevation: 8,
+        marginBottom: 20,
+    },
+    gradientButton: {
+        paddingVertical: 18,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     buttonText: {
-        color: colors.white,
-        fontSize: 16,
-        fontWeight: '700',
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
     },
     skipButton: {
-        paddingVertical: 8,
+        paddingVertical: 10,
     },
     skipText: {
-        color: colors.secondaryText,
-        fontSize: 15,
+        color: '#78909C',
+        fontSize: 16,
         fontWeight: '500',
     },
 });

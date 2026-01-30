@@ -4,33 +4,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
+import { useTranslation } from 'react-i18next';
+
 const PrivacyPolicyScreen = ({ navigation }) => {
+    const { t } = useTranslation();
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Privacy Policy</Text>
+                <Text style={styles.headerTitle}>{t('privacy_title_header')}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.lastUpdated}>Last Updated: October 2023</Text>
+                <Text style={styles.lastUpdated}>{t('privacy_updated')}</Text>
 
-                <Text style={styles.sectionTitle}>1. Introduction</Text>
+                <Text style={styles.sectionTitle}>{t('privacy_sec_1')}</Text>
                 <Text style={styles.paragraph}>
-                    Your privacy is important to us. This policy outlines how we handle your personal and health data.
+                    {t('privacy_sec_1_text')}
                 </Text>
 
-                <Text style={styles.sectionTitle}>2. Data Collection</Text>
+                <Text style={styles.sectionTitle}>{t('privacy_sec_2')}</Text>
                 <Text style={styles.paragraph}>
-                    We collect audio recordings solely for the purpose of analysis. No data is shared with third parties without your consent.
+                    {t('privacy_sec_2_text')}
                 </Text>
 
-                <Text style={styles.sectionTitle}>3. Security</Text>
+                <Text style={styles.sectionTitle}>{t('privacy_sec_3')}</Text>
                 <Text style={styles.paragraph}>
-                    All data is encrypted in transit and at rest to ensure maximum security for your sensitive information.
+                    {t('privacy_sec_3_text')}
                 </Text>
 
                 {/* Add more sections as needed */}

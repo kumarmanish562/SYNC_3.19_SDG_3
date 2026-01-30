@@ -8,7 +8,10 @@ import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 
+import { useTranslation } from 'react-i18next'; // Added import
+
 const NearbyClinicsScreen = ({ navigation }) => {
+    const { t } = useTranslation(); // Hook initialization
     const [location, setLocation] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
     const [clinics, setClinics] = useState([]);
@@ -18,7 +21,7 @@ const NearbyClinicsScreen = ({ navigation }) => {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
+                setErrorMsg(t('clinic_location_permission_denied') || 'Permission to access location was denied');
                 setLoading(false);
                 return;
             }
@@ -35,7 +38,6 @@ const NearbyClinicsScreen = ({ navigation }) => {
     const fetchNearbyClinics = async (lat, lng) => {
         const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-        // If no Google Key, use OpenStreetMap (Overpass API) for real data
         if (!apiKey) {
             console.log("No Google Maps API Key found, fetching from OpenStreetMap...");
             fetchNearbyClinicsOSM(lat, lng);
@@ -57,13 +59,13 @@ const NearbyClinicsScreen = ({ navigation }) => {
                     return {
                         id: place.place_id,
                         name: place.name,
-                        status: isOpen ? "OPEN" : "CLOSED",
+                        status: isOpen ? 'status_open' : 'status_closed', // Use keys
                         statusColor: isOpen ? "#4CAF50" : "#FF5252",
                         statusBg: isOpen ? "#E8F5E9" : "#FFEBEE",
                         distance: `${distKm.toFixed(1)} km`,
-                        time: `${Math.ceil(distKm * 5)} mins`, // Approx driving time
+                        time: `${Math.ceil(distKm * 5)} ${t('mins', 'mins')}`, // Translatable mins
                         address: place.vicinity,
-                        phone: "Unavailable", // Requires 'Place Details' API
+                        phone: "Unavailable",
                         coordinates: {
                             latitude: place.geometry.location.lat,
                             longitude: place.geometry.location.lng
@@ -73,10 +75,9 @@ const NearbyClinicsScreen = ({ navigation }) => {
                     };
                 });
 
-                setClinics(realClinics.slice(0, 10)); // Limit to 10
+                setClinics(realClinics.slice(0, 10));
             } else {
                 console.warn("Google Places API error:", data.status, data.error_message);
-                // Fallback to OSM
                 fetchNearbyClinicsOSM(lat, lng);
             }
         } catch (error) {
@@ -87,7 +88,6 @@ const NearbyClinicsScreen = ({ navigation }) => {
 
     const fetchNearbyClinicsOSM = async (lat, lng) => {
         try {
-            // Overpass API Query: Find nodes with amenity=hospital or clinic within 5km (5000m)
             const query = `
                 [out:json];
                 (
@@ -106,29 +106,28 @@ const NearbyClinicsScreen = ({ navigation }) => {
 
             if (data && data.elements && data.elements.length > 0) {
                 const osmClinics = data.elements
-                    .filter(el => el.tags && el.tags.name) // Only those with names
+                    .filter(el => el.tags && el.tags.name)
                     .map((el) => {
                         const distKm = getDistanceFromLatLonInKm(lat, lng, el.lat, el.lon);
                         return {
                             id: el.id.toString(),
                             name: el.tags.name,
-                            status: "OPEN", // OSM doesn't always have opening hours, assuming open
+                            status: 'status_open', // OSM doesn't always have opening hours
                             statusColor: "#4CAF50",
                             statusBg: "#E8F5E9",
                             distance: `${distKm.toFixed(1)} km`,
-                            time: `${Math.ceil(distKm * 5)} mins`,
-                            address: el.tags['addr:street'] ? `${el.tags['addr:housenumber'] || ''} ${el.tags['addr:street']}` : "Address not listed",
+                            time: `${Math.ceil(distKm * 5)} ${t('mins', 'mins')}`,
+                            address: el.tags['addr:street'] ? `${el.tags['addr:housenumber'] || ''} ${el.tags['addr:street']}` : t('address_not_listed') || "Address not listed",
                             phone: el.tags['contact:phone'] || el.tags.phone || "Unavailable",
                             coordinates: {
                                 latitude: el.lat,
                                 longitude: el.lon
                             },
                             type: el.tags.amenity === 'hospital' ? "Hospital" : "Clinic",
-                            rating: 4.5 // Dummy rating
+                            rating: 4.5
                         };
                     });
 
-                // Sort by distance
                 osmClinics.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
                 setClinics(osmClinics.slice(0, 15));
             } else {
@@ -173,12 +172,12 @@ const NearbyClinicsScreen = ({ navigation }) => {
             return {
                 id: index + 1,
                 name: name,
-                status: "OPEN",
+                status: 'status_open',
                 statusColor: "#4CAF50",
                 statusBg: "#E8F5E9",
-                distance: `${distance} km away`,
-                time: `${Math.ceil(distance * 10)} mins`,
-                address: `Near your location`,
+                distance: `${distance} km ${t('away', 'away')}`,
+                time: `${Math.ceil(distance * 10)} ${t('mins', 'mins')}`,
+                address: t('near_your_location') || `Near your location`,
                 phone: `555-010${index}`,
                 coordinates: {
                     latitude: lat + latOffset,
@@ -191,7 +190,7 @@ const NearbyClinicsScreen = ({ navigation }) => {
         setClinics(newClinics);
     };
 
-    const filters = ["Open Now", "TB Screening", "Rating", "Distance"];
+    const filters = [t('filter_open'), t('filter_tb'), t('filter_rating'), t('filter_distance')];
 
     const openMaps = (lat, lng, label) => {
         const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
@@ -212,7 +211,7 @@ const NearbyClinicsScreen = ({ navigation }) => {
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={{ marginTop: 10 }}>Finding nearby clinics...</Text>
+                <Text style={{ marginTop: 10 }}>{t('clinic_finding')}</Text>
             </SafeAreaView>
         );
     }
@@ -224,7 +223,7 @@ const NearbyClinicsScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Nearby Clinics</Text>
+                <Text style={styles.headerTitle}>{t('clinic_title')}</Text>
                 <TouchableOpacity style={styles.bellButton}>
                     <Ionicons name="notifications-outline" size={24} color="#000" />
                 </TouchableOpacity>
@@ -236,7 +235,7 @@ const NearbyClinicsScreen = ({ navigation }) => {
                 <View style={styles.locationBar}>
                     <Ionicons name="location-sharp" size={20} color={colors.primary} />
                     <Text style={styles.locationText}>
-                        {errorMsg ? "Location Unavailable" : "Current Location"}
+                        {errorMsg ? t('clinic_location_unavailable') : t('clinic_location_current')}
                     </Text>
                 </View>
 
@@ -292,14 +291,14 @@ const NearbyClinicsScreen = ({ navigation }) => {
                         </MapView>
                     ) : (
                         <View style={styles.mapError}>
-                            <Text>{errorMsg || "Map loading..."}</Text>
+                            <Text>{errorMsg || t('clinic_map_loading') || "Map loading..."}</Text>
                         </View>
                     )}
                 </View>
 
                 {/* List Header */}
                 <View style={styles.listHeader}>
-                    <Text style={styles.listTitle}>Clinics near you</Text>
+                    <Text style={styles.listTitle}>{t('clinic_list_title')}</Text>
                 </View>
 
                 {/* Clinics List */}
@@ -315,7 +314,7 @@ const NearbyClinicsScreen = ({ navigation }) => {
                                     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                                         <Text style={styles.clinicName}>{clinic.name}</Text>
                                         <View style={[styles.statusBadge, { backgroundColor: clinic.statusBg }]}>
-                                            <Text style={[styles.statusText, { color: clinic.statusColor }]}>{clinic.status}</Text>
+                                            <Text style={[styles.statusText, { color: clinic.statusColor }]}>{t(clinic.status)}</Text>
                                         </View>
                                     </View>
                                     <View style={styles.clinicMeta}>
@@ -335,13 +334,13 @@ const NearbyClinicsScreen = ({ navigation }) => {
                                     onPress={() => handleCall(clinic.phone)}
                                 >
                                     <Ionicons name="call" size={18} color="#FFF" style={{ marginRight: 8 }} />
-                                    <Text style={styles.callButtonText}>Call</Text>
+                                    <Text style={styles.callButtonText}>{t('clinic_call')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.directionButton}
                                     onPress={() => openMaps(clinic.coordinates.latitude, clinic.coordinates.longitude, clinic.name)}
                                 >
-                                    <Text style={styles.directionText}>Directions</Text>
+                                    <Text style={styles.directionText}>{t('clinic_directions')}</Text>
                                     <MaterialCommunityIcons name="directions" size={18} color={colors.primary} style={{ marginLeft: 4 }} />
                                 </TouchableOpacity>
                             </View>

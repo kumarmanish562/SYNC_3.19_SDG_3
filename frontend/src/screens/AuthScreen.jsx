@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { auth, db } from '../services/firebaseConfig';
+import { useTranslation } from 'react-i18next';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 import { sendOtp, verifyOtp } from '../services/api';
@@ -11,6 +12,7 @@ import { sendOtp, verifyOtp } from '../services/api';
 const { width } = Dimensions.get('window');
 
 const AuthScreen = ({ navigation }) => {
+    const { t } = useTranslation();
     const [isLogin, setIsLogin] = useState(true); // Toggle between Login and Signup
 
     // Form State
@@ -116,11 +118,12 @@ const AuthScreen = ({ navigation }) => {
 
                 {/* Logo Section */}
                 <View style={styles.logoSection}>
-                    <View style={styles.logoBox}>
-                        <MaterialCommunityIcons name="medical-bag" size={40} color={colors.primary} />
-                    </View>
-                    <Text style={styles.appTitle}>TB-SCAN</Text>
-                    <Text style={styles.appSubtitle}>Smart Tuberculosis Screening</Text>
+                    <Image
+                        source={require('../../assets/logo.png')}
+                        style={{ width: 120, height: 120, resizeMode: 'contain' }}
+                    />
+                    {/* <Text style={styles.appTitle}>TB-SCAN</Text> */}
+                    {/* <Text style={styles.appSubtitle}>Smart Tuberculosis Screening</Text> */}
                 </View>
 
                 {/* Card Container */}
@@ -132,13 +135,13 @@ const AuthScreen = ({ navigation }) => {
                             style={[styles.tab, isLogin && styles.activeTab]}
                             onPress={() => setIsLogin(true)}
                         >
-                            <Text style={[styles.tabText, isLogin && styles.activeTabText]}>Login</Text>
+                            <Text style={[styles.tabText, isLogin && styles.activeTabText]}>{t('login')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.tab, !isLogin && styles.activeTab]}
                             onPress={() => setIsLogin(false)}
                         >
-                            <Text style={[styles.tabText, !isLogin && styles.activeTabText]}>Sign Up</Text>
+                            <Text style={[styles.tabText, !isLogin && styles.activeTabText]}>{t('signup')}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -147,7 +150,7 @@ const AuthScreen = ({ navigation }) => {
 
                         {!isLogin && (
                             <>
-                                <Text style={styles.label}>Full Name</Text>
+                                <Text style={styles.label}>{t('full_name')}</Text>
                                 <View style={styles.inputWrapper}>
                                     <TextInput
                                         style={styles.input}
@@ -161,11 +164,11 @@ const AuthScreen = ({ navigation }) => {
                             </>
                         )}
 
-                        <Text style={styles.label}>Email Address</Text>
+                        <Text style={styles.label}>{t('email_address')}</Text>
                         <View style={styles.inputWrapper}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="name@example.com"
+                                placeholder={t('placeholder_email')}
                                 value={email}
                                 onChangeText={setEmail}
                                 keyboardType="email-address"
@@ -176,7 +179,7 @@ const AuthScreen = ({ navigation }) => {
 
                         {!isLogin && (
                             <>
-                                <Text style={styles.label}>Mobile Number</Text>
+                                <Text style={styles.label}>{t('mobile_number')}</Text>
                                 <View style={styles.inputWrapper}>
                                     <TextInput
                                         style={styles.input}
@@ -190,7 +193,7 @@ const AuthScreen = ({ navigation }) => {
                             </>
                         )}
 
-                        <Text style={styles.label}>Password</Text>
+                        <Text style={styles.label}>{t('password')}</Text>
                         {!otpSent && (
                             <View style={styles.inputWrapper}>
                                 <TextInput
@@ -199,6 +202,7 @@ const AuthScreen = ({ navigation }) => {
                                     value={password}
                                     onChangeText={setPassword}
                                     secureTextEntry={!showPassword}
+                                // placeholderTextColor="#999"
                                 />
                                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                     <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#999" />
@@ -210,7 +214,7 @@ const AuthScreen = ({ navigation }) => {
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Enter 6-digit OTP"
+                                    placeholder={t('otp_enter')}
                                     value={otp}
                                     onChangeText={setOtp}
                                     keyboardType="number-pad"
@@ -222,7 +226,7 @@ const AuthScreen = ({ navigation }) => {
 
                         {!isLogin && (
                             <>
-                                <Text style={styles.label}>Confirm Password</Text>
+                                <Text style={styles.label}>{t('confirm_password')}</Text>
                                 <View style={styles.inputWrapper}>
                                     <TextInput
                                         style={styles.input}
@@ -243,13 +247,13 @@ const AuthScreen = ({ navigation }) => {
                                 style={styles.forgotPassContainer}
                                 onPress={() => navigation.navigate('ForgotPassword')}
                             >
-                                <Text style={styles.forgotPassText}>Forgot Password?</Text>
+                                <Text style={styles.forgotPassText}>{t('forgot_password')}</Text>
                             </TouchableOpacity>
                         )}
 
                         <TouchableOpacity style={[styles.mainButton, loading && { backgroundColor: '#AAA' }]} onPress={handleAuth} disabled={loading}>
                             <Text style={styles.mainButtonText}>
-                                {loading ? "Please wait..." : (isLogin ? "Login" : "Sign Up")}
+                                {loading ? t('auth_pending') : (isLogin ? t('login') : t('signup'))}
                             </Text>
                         </TouchableOpacity>
 
@@ -258,14 +262,14 @@ const AuthScreen = ({ navigation }) => {
                             <>
                                 <View style={styles.dividerContainer}>
                                     <View style={styles.dividerLine} />
-                                    <Text style={styles.dividerText}>OR</Text>
+                                    <Text style={styles.dividerText}>{t('or')}</Text>
                                     <View style={styles.dividerLine} />
                                 </View>
 
                                 <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
                                     {/* In real app use actual Google logo image */}
                                     <Ionicons name="logo-google" size={20} color="#EA4335" style={{ marginRight: 10 }} />
-                                    <Text style={styles.googleButtonText}>Continue with Google</Text>
+                                    <Text style={styles.googleButtonText}>{t('continue_with_google')}</Text>
                                 </TouchableOpacity>
                             </>
                         )}
@@ -277,7 +281,7 @@ const AuthScreen = ({ navigation }) => {
                     </View>
                 </View>
 
-                <Text style={styles.copyrightText}>© 2024 TB-SCAN HEALTH SYSTEMS</Text>
+                <Text style={styles.copyrightText}>{t('copyright')}</Text>
 
             </ScrollView>
         </SafeAreaView>

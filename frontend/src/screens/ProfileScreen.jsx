@@ -3,19 +3,21 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
 
 import { auth, db } from '../services/firebaseConfig';
 import { ref, onValue } from 'firebase/database';
 import { signOut } from 'firebase/auth';
 
 const ProfileScreen = ({ navigation }) => {
+    const { t } = useTranslation();
     // Real User Data State
     const [user, setUser] = React.useState({
-        name: "Loading...",
+        name: t('loading'),
         email: "...",
         mobile: "...",
-        dob: "Not set",
-        gender: "Not set",
+        dob: t('not_set'),
+        gender: t('not_set'),
     });
 
     // Stats State
@@ -35,9 +37,9 @@ const ProfileScreen = ({ navigation }) => {
                     setUser({
                         name: data.username || currentUser.displayName || "User",
                         email: data.email || currentUser.email,
-                        mobile: data.mobile || "Not set",
-                        dob: data.dob || "Not set",
-                        gender: data.gender || "Not set",
+                        mobile: data.mobile || t('not_set'),
+                        dob: data.dob || t('not_set'),
+                        gender: data.gender || t('not_set'),
                         avatar: data.avatar || null
                     });
                 }
@@ -76,7 +78,7 @@ const ProfileScreen = ({ navigation }) => {
                 unsubscribeReports();
             };
         }
-    }, []);
+    }, [t]);
 
     const InfoRow = ({ icon, label, value }) => (
         <View style={styles.infoRow}>
@@ -93,7 +95,7 @@ const ProfileScreen = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Profile</Text>
+                <Text style={styles.headerTitle}>{t('nav_profile')}</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -110,36 +112,36 @@ const ProfileScreen = ({ navigation }) => {
                         style={styles.editButton}
                         onPress={() => navigation.navigate('EditProfile')}
                     >
-                        <Text style={styles.editButtonText}>Edit Profile</Text>
+                        <Text style={styles.editButtonText}>{t('edit_profile')}</Text>
                         <Ionicons name="pencil" size={16} color="#FFF" style={{ marginLeft: 8 }} />
                     </TouchableOpacity>
                 </View>
 
                 {/* Info Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Personal Information</Text>
+                    <Text style={styles.sectionTitle}>{t('personal_information')}</Text>
                     <View style={styles.card}>
-                        <InfoRow icon="calendar-outline" label="Date of Birth" value={user.dob} />
+                        <InfoRow icon="calendar-outline" label={t('dob')} value={user.dob} />
                         <View style={styles.divider} />
-                        <InfoRow icon="people-outline" label="Gender" value={user.gender} />
+                        <InfoRow icon="people-outline" label={t('gender')} value={user.gender} />
                         <View style={styles.divider} />
-                        <InfoRow icon="mail-outline" label="Email Address" value={user.email} />
+                        <InfoRow icon="mail-outline" label={t('email_address')} value={user.email} />
                         <View style={styles.divider} />
-                        <InfoRow icon="call-outline" label="Mobile Number" value={user.mobile} />
+                        <InfoRow icon="call-outline" label={t('mobile_number')} value={user.mobile} />
                     </View>
                 </View>
 
                 {/* Stats / Other */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Account Statistics</Text>
+                    <Text style={styles.sectionTitle}>{t('account_statistics')}</Text>
                     <View style={styles.statsRow}>
                         <View style={styles.statCard}>
                             <Text style={styles.statNumber}>{stats.screenings}</Text>
-                            <Text style={styles.statLabel}>Screenings</Text>
+                            <Text style={styles.statLabel}>{t('screenings')}</Text>
                         </View>
                         <View style={styles.statCard}>
                             <Text style={styles.statNumber}>{stats.avgRisk}</Text>
-                            <Text style={styles.statLabel}>Avg Risk</Text>
+                            <Text style={styles.statLabel}>{t('avg_risk')}</Text>
                         </View>
                     </View>
                 </View>
