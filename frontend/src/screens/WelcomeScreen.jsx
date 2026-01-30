@@ -10,16 +10,14 @@ const WelcomeScreen = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.contentContainer}>
-                {/* Header Logo */}
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
                         <MaterialCommunityIcons name="lungs" size={28} color={colors.primary} />
                     </View>
-                    <Text style={styles.headerText}>TB-SCAN</Text>
-                    <View style={{ width: 28 }} /> {/* Spacer to balance the center text if simpler than absolute */}
+                    <Text style={styles.headerText}>CoughX</Text>
+                    <View style={{ width: 28 }} />
                 </View>
 
-                {/* Central Illustration Area */}
                 <View style={styles.illustrationContainer}>
                     <View style={styles.circleBackground}>
                         <View style={styles.iconGroup}>
@@ -28,14 +26,12 @@ const WelcomeScreen = ({ navigation }) => {
                     </View>
                 </View>
 
-                {/* Text Content */}
                 <View style={styles.textContent}>
-                    <Text style={styles.title}>Welcome to TB-SCAN</Text>
+                    <Text style={styles.title}>Welcome to CoughX</Text>
                     <Text style={styles.subtitle}>
                         AI-powered tuberculosis screening right from your phone.
                     </Text>
 
-                    {/* Pagination Dots */}
                     <View style={styles.paginationContainer}>
                         <View style={[styles.dot, styles.activeDot]} />
                         <View style={styles.dot} />
@@ -43,11 +39,10 @@ const WelcomeScreen = ({ navigation }) => {
                     </View>
                 </View>
 
-                {/* Action Buttons */}
                 <View style={styles.actionContainer}>
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={() => navigation.navigate('Home')}
+                        onPress={() => navigation.navigate('HowItWorks')}
                     >
                         <Text style={styles.buttonText}>Get Started</Text>
                     </TouchableOpacity>
