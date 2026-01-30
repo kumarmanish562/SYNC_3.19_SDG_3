@@ -39,6 +39,7 @@ exports.analyzeAudio = async (req, res) => {
         const status = mockRiskScore > 70 ? "High Risk" : (mockRiskScore > 30 ? "Medium Risk" : "Low Risk");
 
         // 3. Save Report to Realtime Database
+        // Use push() to generate a unique key
         const reportRef = db.ref(`reports/${userId}`).push();
         await reportRef.set({
             score: mockRiskScore,
@@ -77,5 +78,37 @@ exports.analyzeAudio = async (req, res) => {
                 isFallback: true
             }
         });
+    }
+};
+
+exports.getHistory = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!userId) {
+            return res.status(400).json({ success: false, message: "User ID required" });
+        }
+
+        const reportsRef = db.ref(`reports/${userId}`);
+        const snapshot = await reportsRef.once('value');
+        const data = snapshot.val();
+
+        if (!data) {
+            return res.json({ success: true, data: [] });
+        }
+
+        // Convert object to array
+        const history = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+        }));
+
+        // Sort by timestamp descending
+        history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        res.json({ success: true, data: history });
+
+    } catch (error) {
+        console.error("Get History Error:", error);
+        res.status(500).json({ success: false, message: "Failed to fetch history" });
     }
 };

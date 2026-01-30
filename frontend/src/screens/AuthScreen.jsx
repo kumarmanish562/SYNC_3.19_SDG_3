@@ -57,23 +57,39 @@ const AuthScreen = ({ navigation }) => {
         setLoading(true);
 
         try {
-            // Send OTP first regardless of Login or Signup to verify email ownership
-            // (Optimize this later to check password first for login, but for now this is safe)
-            console.log("Sending OTP to:", email);
-            await sendOtp(email);
+            if (isLogin) {
+                // LOGIN FLOW: Direct Firebase Login (No OTP)
+                await signInWithEmailAndPassword(auth, email, password);
+                navigation.replace("MainTabs");
+            } else {
+                // SIGNUP FLOW: Send OTP first
+                console.log("Sending OTP to:", email);
+                await sendOtp(email);
 
-            // Navigate to OTP Screen
-            navigation.navigate("OtpVerification", {
-                email,
-                password,
-                mobile, // only for signup
-                name,   // only for signup
-                isLogin // pass the mode so OTP screen knows what to do
-            });
+                // Navigate to OTP Screen
+                navigation.navigate("OtpVerification", {
+                    email,
+                    password,
+                    mobile,
+                    name,
+                    isLogin: false // Always signup if we go here
+                });
+            }
 
         } catch (error) {
             console.error("Auth Error:", error);
-            Alert.alert("Authentication Failed", "Could not send OTP. Check Network.");
+            // Handle Firebase specific errors
+            let errorMessage = "Could not complete request.";
+            if (error.code === 'auth/invalid-credential') {
+                errorMessage = "Invalid email or password.";
+            } else if (error.code === 'auth/user-not-found') {
+                errorMessage = "User not found.";
+            } else if (error.code === 'auth/wrong-password') {
+                errorMessage = "Incorrect password.";
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            Alert.alert("Authentication Failed", errorMessage);
         } finally {
             setLoading(false);
         }

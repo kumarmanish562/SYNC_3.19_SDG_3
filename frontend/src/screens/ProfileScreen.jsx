@@ -18,11 +18,18 @@ const ProfileScreen = ({ navigation }) => {
         gender: "Not set",
     });
 
+    // Stats State
+    const [stats, setStats] = React.useState({
+        screenings: 0,
+        avgRisk: "N/A"
+    });
+
     React.useEffect(() => {
         const currentUser = auth.currentUser;
         if (currentUser) {
+            // User Profile Listener
             const userRef = ref(db, 'users/' + currentUser.uid);
-            const unsubscribe = onValue(userRef, (snapshot) => {
+            const unsubscribeUser = onValue(userRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     setUser({
@@ -35,7 +42,39 @@ const ProfileScreen = ({ navigation }) => {
                     });
                 }
             });
-            return () => unsubscribe();
+
+            // Reports/Stats Listener
+            const reportsRef = ref(db, 'reports/' + currentUser.uid);
+            const unsubscribeReports = onValue(reportsRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const reports = Object.values(data);
+                    const count = reports.length;
+
+                    if (count > 0) {
+                        const totalScore = reports.reduce((sum, item) => sum + (item.score || 0), 0);
+                        const avgScore = totalScore / count;
+
+                        let riskLabel = "Low";
+                        if (avgScore > 70) riskLabel = "High";
+                        else if (avgScore > 30) riskLabel = "Medium";
+
+                        setStats({
+                            screenings: count,
+                            avgRisk: riskLabel
+                        });
+                    } else {
+                        setStats({ screenings: 0, avgRisk: "N/A" });
+                    }
+                } else {
+                    setStats({ screenings: 0, avgRisk: "N/A" });
+                }
+            });
+
+            return () => {
+                unsubscribeUser();
+                unsubscribeReports();
+            };
         }
     }, []);
 
@@ -95,11 +134,11 @@ const ProfileScreen = ({ navigation }) => {
                     <Text style={styles.sectionTitle}>Account Statistics</Text>
                     <View style={styles.statsRow}>
                         <View style={styles.statCard}>
-                            <Text style={styles.statNumber}>12</Text>
+                            <Text style={styles.statNumber}>{stats.screenings}</Text>
                             <Text style={styles.statLabel}>Screenings</Text>
                         </View>
                         <View style={styles.statCard}>
-                            <Text style={styles.statNumber}>Low</Text>
+                            <Text style={styles.statNumber}>{stats.avgRisk}</Text>
                             <Text style={styles.statLabel}>Avg Risk</Text>
                         </View>
                     </View>

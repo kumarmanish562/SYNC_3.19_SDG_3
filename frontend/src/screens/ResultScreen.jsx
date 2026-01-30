@@ -33,7 +33,9 @@ const ResultScreen = ({ navigation, route }) => {
     }
 
     // Date/Method props
-    const analysisDate = new Date().toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
+    const { timestamp } = route.params || {};
+    const resultDate = timestamp ? new Date(timestamp) : new Date();
+    const analysisDate = resultDate.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
     const method = "AI Acoustic Analysis";
 
     return (

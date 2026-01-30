@@ -1,99 +1,111 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { fetchHistory } from '../services/api';
+import { auth } from '../services/firebaseConfig';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 const HistoryScreen = ({ navigation }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [historyData, setHistoryData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    // Mock Data based on the image
-    const recentTests = [
-        {
-            id: 1,
-            riskLevel: "LOW RISK",
-            riskColor: "#2ECC71", // Green
-            probability: "12%",
-            date: "Oct 24, 2023 • 10:30 AM",
-            imageType: "cell", // Placeholder for image type
-            imageColor: "#FFCDD2" // Pinkish
-        },
-        {
-            id: 2,
-            riskLevel: "MEDIUM RISK",
-            riskColor: "#FF9800", // Orange
-            probability: "45%",
-            date: "Sep 15, 2023 • 02:15 PM",
-            imageType: "scan",
-            imageColor: "#212121" // Dark/Black
+    const loadHistory = async () => {
+        if (auth.currentUser) {
+            const res = await fetchHistory(auth.currentUser.uid);
+            if (res.success) {
+                setHistoryData(res.data);
+            }
         }
-    ];
+        setLoading(false);
+        setRefreshing(false);
+    };
 
-    const lastMonthTests = [
-        {
-            id: 3,
-            riskLevel: "LOW RISK",
-            riskColor: "#2ECC71",
-            probability: "8%",
-            date: "Aug 02, 2023 • 09:45 AM",
-            imageType: "glass",
-            imageColor: "#263238" // Dark Grey
-        },
-        {
-            id: 4,
-            riskLevel: "LOW RISK",
-            riskColor: "#2ECC71",
-            probability: "5%",
-            date: "Jul 18, 2023 • 11:05 AM",
-            imageType: "blue",
-            imageColor: "#0277BD" // Blue
-        }
-    ];
+    useFocusEffect(
+        useCallback(() => {
+            loadHistory();
+        }, [])
+    );
 
-    const renderTestCard = (item) => (
-        <View key={item.id} style={styles.card}>
-            <View style={styles.cardContent}>
-                {/* Text Info */}
-                <View style={styles.infoContainer}>
-                    <View style={styles.riskRow}>
-                        <View style={[styles.riskDot, { backgroundColor: item.riskColor }]} />
-                        <Text style={[styles.riskText, { color: item.riskColor }]}>{item.riskLevel}</Text>
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadHistory();
+    };
+
+    const getRiskColor = (status) => {
+        if (!status) return colors.primary;
+        const lowerStatus = status.toLowerCase();
+        if (lowerStatus.includes('high')) return '#E74C3C'; // Red
+        if (lowerStatus.includes('medium')) return '#F39C12'; // Orange
+        return '#2ECC71'; // Green (Low Risk)
+    };
+
+    const formatDate = (isoString) => {
+        if (!isoString) return 'Unknown Date';
+        const date = new Date(isoString);
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const filteredData = historyData.filter(item => {
+        const query = searchQuery.toLowerCase();
+        const dateStr = formatDate(item.timestamp).toLowerCase();
+        const statusStr = (item.status || '').toLowerCase();
+        return dateStr.includes(query) || statusStr.includes(query);
+    });
+
+    const renderTestCard = (item) => {
+        const riskColor = getRiskColor(item.status);
+
+        return (
+            <View key={item.id} style={styles.card}>
+                <View style={styles.cardContent}>
+                    {/* Text Info */}
+                    <View style={styles.infoContainer}>
+                        <View style={styles.riskRow}>
+                            <View style={[styles.riskDot, { backgroundColor: riskColor }]} />
+                            <Text style={[styles.riskText, { color: riskColor }]}>{item.status || "UNKNOWN"}</Text>
+                        </View>
+
+                        <Text style={styles.probabilityText}>{item.score}% Probability</Text>
+                        <Text style={styles.dateText}>{formatDate(item.timestamp)}</Text>
+
+                        <TouchableOpacity
+                            style={styles.viewDetailsBtn}
+                            onPress={() => navigation.navigate('Result', {
+                                score: item.score,
+                                status: item.status,
+                                timestamp: item.timestamp
+                            })}
+                        >
+                            <Text style={styles.viewDetailsText}>View Details</Text>
+                            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                        </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.probabilityText}>{item.probability} Probability</Text>
-                    <Text style={styles.dateText}>{item.date}</Text>
-
-                    <TouchableOpacity
-                        style={styles.viewDetailsBtn}
-                        onPress={() => navigation.navigate('ReportDetails')}
-                    // Assuming reusing ReportDetails for any history item
-                    >
-                        <Text style={styles.viewDetailsText}>View Details</Text>
-                        <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Image Placeholder - Visuals */}
-                <View style={[styles.imagePlaceholder, { backgroundColor: item.imageColor }]}>
-                    {/* Simulating content based on type */}
-                    {item.imageType === 'cell' && (
-                        <MaterialCommunityIcons name="bacteria-outline" size={40} color="#E91E63" style={{ opacity: 0.8 }} />
-                    )}
-                    {item.imageType === 'scan' && (
-                        <MaterialCommunityIcons name="head-snowflake-outline" size={40} color="#4FC3F7" style={{ opacity: 0.8 }} />
-                    )}
-                    {item.imageType === 'glass' && (
-                        <MaterialCommunityIcons name="glass-fragile" size={40} color="#80DEEA" style={{ opacity: 0.8 }} />
-                    )}
-                    {item.imageType === 'blue' && (
-                        <View style={{ width: '100%', height: '100%', opacity: 0.3, backgroundColor: '#FFF' }} />
-                    )}
+                    {/* Image Placeholder - Visuals */}
+                    <View style={[styles.imagePlaceholder, { backgroundColor: riskColor + '20' }]}>
+                        {/* Visual based on risk */}
+                        {item.status && item.status.toLowerCase().includes('high') ? (
+                            <MaterialCommunityIcons name="bacteria-outline" size={40} color={riskColor} style={{ opacity: 0.8 }} />
+                        ) : (
+                            <MaterialCommunityIcons name="lungs" size={40} color={riskColor} style={{ opacity: 0.8 }} />
+                        )}
+                    </View>
                 </View>
             </View>
-        </View>
-    );
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -103,13 +115,19 @@ const HistoryScreen = ({ navigation }) => {
                     <Ionicons name="chevron-back" size={28} color="#000" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Test History</Text>
-                <TouchableOpacity style={styles.filterButton}>
-                    <MaterialCommunityIcons name="filter-variant" size={24} color={colors.primary} />
+                <TouchableOpacity style={styles.filterButton} onPress={loadHistory}>
+                    <Ionicons name="refresh" size={24} color={colors.primary} />
                 </TouchableOpacity>
             </View>
 
             {/* Content */}
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
+            >
 
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
@@ -123,17 +141,26 @@ const HistoryScreen = ({ navigation }) => {
                     />
                 </View>
 
-                {/* Recent Tests Section */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>RECENT TESTS</Text>
-                </View>
-                {recentTests.map(renderTestCard)}
-
-                {/* Last Month Section */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>LAST MONTH</Text>
-                </View>
-                {lastMonthTests.map(renderTestCard)}
+                {loading ? (
+                    <View style={styles.loaderContainer}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={styles.loadingText}>Loading history...</Text>
+                    </View>
+                ) : filteredData.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <MaterialCommunityIcons name="history" size={60} color="#DDD" />
+                        <Text style={styles.emptyText}>No test history found.</Text>
+                        <Text style={styles.emptySubText}>Records will appear here after you analyze a cough.</Text>
+                    </View>
+                ) : (
+                    <>
+                        {/* We could split by date (Recent vs Last Month) but for now just a list is fine */}
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>ALL TESTS ({filteredData.length})</Text>
+                        </View>
+                        {filteredData.map(renderTestCard)}
+                    </>
+                )}
 
                 {/* Padding for bottom tab bar */}
                 <View style={{ height: 20 }} />
@@ -171,6 +198,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 10,
         paddingBottom: 20,
+        flexGrow: 1, // Ensure empty state centers vertically
     },
     searchContainer: {
         flexDirection: 'row',
@@ -272,6 +300,36 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 50,
+    },
+    loadingText: {
+        marginTop: 10,
+        color: '#999',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 50,
+        opacity: 0.6,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginTop: 16,
+    },
+    emptySubText: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 8,
+        textAlign: 'center',
+        paddingHorizontal: 40,
     },
 });
 

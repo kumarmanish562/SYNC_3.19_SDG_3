@@ -14,8 +14,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-const { analyzeAudio } = require("../controllers/audioController");
+const { analyzeAudio, getHistory } = require("../controllers/audioController");
 
 router.post("/analyze", upload.single("audio"), analyzeAudio);
+router.get("/history/:userId", getHistory);
 
 module.exports = router;

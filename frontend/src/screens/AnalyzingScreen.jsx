@@ -6,6 +6,7 @@ import { colors } from '../theme/colors';
 const { width } = Dimensions.get('window');
 
 import { analyzeCough } from '../services/api';
+import { auth } from '../services/firebaseConfig';
 
 const AnalyzingScreen = ({ route, navigation }) => {
     const { audioUri } = route.params || {};
@@ -24,7 +25,8 @@ const AnalyzingScreen = ({ route, navigation }) => {
             }
 
             try {
-                const result = await analyzeCough(audioUri);
+                const userId = auth.currentUser ? auth.currentUser.uid : null;
+                const result = await analyzeCough(audioUri, userId);
 
                 if (isMounted) {
                     if (result && result.success) {
