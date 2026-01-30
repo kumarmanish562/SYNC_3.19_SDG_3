@@ -4,15 +4,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
+import { auth, db } from '../services/firebaseConfig';
+import { ref, onValue } from 'firebase/database';
+import { signOut } from 'firebase/auth';
+
 const ProfileScreen = ({ navigation }) => {
-    // Mock user data
-    const user = {
-        name: "Johnathan Doe",
-        email: "john.doe@healthmail.com",
-        dob: "05/15/1990",
-        gender: "Male",
-        avatar: null // potentially a uri if real
-    };
+    // Real User Data State
+    const [user, setUser] = React.useState({
+        name: "Loading...",
+        email: "...",
+        mobile: "...",
+        dob: "Not set",
+        gender: "Not set",
+    });
+
+    React.useEffect(() => {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+            const userRef = ref(db, 'users/' + currentUser.uid);
+            const unsubscribe = onValue(userRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    setUser({
+                        name: data.username || currentUser.displayName || "User",
+                        email: data.email || currentUser.email,
+                        mobile: data.mobile || "Not set",
+                        dob: data.dob || "Not set",
+                        gender: data.gender || "Not set",
+                        avatar: data.avatar || null
+                    });
+                }
+            });
+            return () => unsubscribe();
+        }
+    }, []);
 
     const InfoRow = ({ icon, label, value }) => (
         <View style={styles.infoRow}>
@@ -60,6 +85,8 @@ const ProfileScreen = ({ navigation }) => {
                         <InfoRow icon="people-outline" label="Gender" value={user.gender} />
                         <View style={styles.divider} />
                         <InfoRow icon="mail-outline" label="Email Address" value={user.email} />
+                        <View style={styles.divider} />
+                        <InfoRow icon="call-outline" label="Mobile Number" value={user.mobile} />
                     </View>
                 </View>
 

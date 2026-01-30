@@ -1,13 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 
 const NearbyClinicsScreen = ({ navigation }) => {
-    // Dummy Data for Clinics
+    // Dummy Data for Clinics with Coordinates
     const clinics = [
         {
             id: 1,
@@ -18,6 +18,8 @@ const NearbyClinicsScreen = ({ navigation }) => {
             distance: "0.8 km away",
             time: "12 mins",
             address: "123 Medical Plaza, Suite 400, Brooklyn, NY 11201",
+            phone: "555-0123",
+            coordinates: { lat: 40.6925, lng: -73.9911 },
             type: "TB Center"
         },
         {
@@ -29,6 +31,8 @@ const NearbyClinicsScreen = ({ navigation }) => {
             distance: "2.5 km away",
             time: "8 mins",
             address: "45 Respiratory Rd, Brooklyn, NY 11205",
+            phone: "555-0199",
+            coordinates: { lat: 40.6950, lng: -73.9800 },
             type: "Clinic"
         },
         {
@@ -40,11 +44,40 @@ const NearbyClinicsScreen = ({ navigation }) => {
             distance: "3.2 km away",
             time: "15 mins",
             address: "88 Health Ave, Brooklyn, NY 11206",
+            phone: "555-0255",
+            coordinates: { lat: 40.7000, lng: -73.9400 },
             type: "Specialist"
         }
     ];
 
     const filters = ["Open Now", "TB Screening", "Rating", "Distance"];
+
+    // Function to open Google Maps or Apple Maps
+    const openMaps = (lat, lng, label) => {
+        const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+        const latLng = `${lat},${lng}`;
+        const labelStr = label || 'Clinic';
+        const url = Platform.select({
+            ios: `${scheme}${labelStr}@${latLng}`,
+            android: `${scheme}${latLng}(${labelStr})`
+        });
+
+        Linking.openURL(url);
+    };
+
+    const handleCall = (phoneNumber) => {
+        Linking.openURL(`tel:${phoneNumber}`);
+    };
+
+    const openSearchInMaps = () => {
+        // Opens maps searching for 'TB clinics' nearby
+        const query = "TB clinics near me";
+        const url = Platform.select({
+            ios: `maps:0,0?q=${query}`,
+            android: `geo:0,0?q=${query}`
+        });
+        Linking.openURL(url);
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -65,7 +98,6 @@ const NearbyClinicsScreen = ({ navigation }) => {
                 <View style={styles.locationBar}>
                     <Ionicons name="location-sharp" size={20} color={colors.primary} />
                     <Text style={styles.locationText}>Brooklyn, NY</Text>
-                    {/* Could add an edit icon or dropdown arrow here */}
                 </View>
 
                 {/* Filter Chips */}
@@ -99,10 +131,19 @@ const NearbyClinicsScreen = ({ navigation }) => {
                     ))}
                 </ScrollView>
 
-                {/* Map Placeholder */}
-                <View style={styles.mapContainer}>
-                    {/* Simulating Map View */}
-                    <View style={styles.mapBackground}>
+                {/* Interactive Map Entry Point */}
+                <TouchableOpacity
+                    style={styles.mapContainer}
+                    activeOpacity={0.9}
+                    onPress={openSearchInMaps}
+                >
+                    <Image
+                        source={{ uri: `https://maps.googleapis.com/maps/api/staticmap?center=Brooklyn,NY&zoom=13&size=600x300&maptype=roadmap&markers=color:red%7Clabel:C%7C40.7128,-74.0060&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}` }}
+                        style={styles.mapBackground}
+                        resizeMode="cover"
+                    />
+                    {/* Fallback overlay if API key invalid (likely for demo) */}
+                    <View style={[styles.mapBackground, { position: 'absolute', backgroundColor: 'rgba(227, 242, 253, 0.5)' }]}>
                         {/* Map Grid Lines */}
                         <View style={styles.mapGridHorizontal} />
                         <View style={styles.mapGridVertical} />
@@ -124,15 +165,16 @@ const NearbyClinicsScreen = ({ navigation }) => {
                         </View>
                     </View>
                     <View style={styles.mapLabelOverlay}>
-                        <Text style={styles.mapOverlayText}>New York</Text>
+                        <Text style={styles.mapOverlayText}>Open in Google Maps</Text>
+                        <Ionicons name="open-outline" size={16} color="#555" style={{ marginLeft: 4 }} />
                     </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* List Header */}
                 <View style={styles.listHeader}>
                     <Text style={styles.listTitle}>Clinics near you</Text>
-                    <TouchableOpacity>
-                        <Text style={styles.viewAllText}>View All</Text>
+                    <TouchableOpacity onPress={openSearchInMaps}>
+                        <Text style={styles.viewAllText}>View Map</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -141,7 +183,10 @@ const NearbyClinicsScreen = ({ navigation }) => {
                     {clinics.map((clinic) => (
                         <View key={clinic.id} style={styles.clinicCard}>
                             {/* Card Header */}
-                            <View style={styles.clinicHeader}>
+                            <TouchableOpacity
+                                style={styles.clinicHeader}
+                                onPress={() => openMaps(clinic.coordinates.lat, clinic.coordinates.lng, clinic.name)}
+                            >
                                 <View>
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                         <Text style={styles.clinicName}>{clinic.name}</Text>
@@ -157,21 +202,30 @@ const NearbyClinicsScreen = ({ navigation }) => {
                                 <View style={styles.clinicIconBox}>
                                     <MaterialCommunityIcons name="medical-bag" size={20} color={colors.primary} />
                                 </View>
-                            </View>
+                            </TouchableOpacity>
 
                             {/* Address */}
-                            <View style={styles.addressRow}>
+                            <TouchableOpacity
+                                style={styles.addressRow}
+                                onPress={() => openMaps(clinic.coordinates.lat, clinic.coordinates.lng, clinic.name)}
+                            >
                                 <Ionicons name="business" size={14} color="#999" />
                                 <Text style={styles.addressText}>{clinic.address}</Text>
-                            </View>
+                            </TouchableOpacity>
 
                             {/* Actions */}
                             <View style={styles.cardActions}>
-                                <TouchableOpacity style={styles.callButton}>
+                                <TouchableOpacity
+                                    style={styles.callButton}
+                                    onPress={() => handleCall(clinic.phone)}
+                                >
                                     <Ionicons name="call" size={18} color="#FFF" style={{ marginRight: 8 }} />
                                     <Text style={styles.callButtonText}>Call Clinic</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={styles.directionButton}>
+                                <TouchableOpacity
+                                    style={styles.directionButton}
+                                    onPress={() => openMaps(clinic.coordinates.lat, clinic.coordinates.lng, clinic.name)}
+                                >
                                     <MaterialCommunityIcons name="directions" size={22} color="#333" />
                                 </TouchableOpacity>
                             </View>
@@ -294,9 +348,15 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 10,
         left: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
     mapOverlayText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#555',
     },

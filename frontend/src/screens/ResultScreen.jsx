@@ -7,16 +7,34 @@ import { colors } from '../theme/colors';
 const { width } = Dimensions.get('window');
 
 const ResultScreen = ({ navigation, route }) => {
-    // In a real app, we'd pass these as params. For now, hardcode to match image.
-    const riskScore = 15;
-    const isLowRisk = riskScore < 30; // Example threshold
-    const riskLabel = "Low Risk";
-    const riskColor = "#2ECC71"; // Green for low risk
-    const riskBg = "#E8F8F5"; // Light green bg
+    // Get params from navigation
+    const { score = 15, status } = route.params || {};
+
+    const riskScore = score;
+    const isLowRisk = riskScore < 30; // 0-30 Low, 31-70 Medium, 71+ High
+    const isHighRisk = riskScore > 70;
+
+    let riskLabel = "Low Risk";
+    let riskColor = "#2ECC71"; // Green
+    let riskBg = "#E8F8F5";
+
+    if (isHighRisk) {
+        riskLabel = "High Risk";
+        riskColor = "#FF5252";
+        riskBg = "#FFEBEE";
+    } else if (!isLowRisk) {
+        riskLabel = "Medium Risk";
+        riskColor = "#FF9800";
+        riskBg = "#FFF3E0";
+    }
+
+    if (status && status !== 'Low Risk' && status !== 'Medium Risk' && status !== 'High Risk') {
+        // use backend provided status if matched, or fallback to score logic
+    }
 
     // Date/Method props
-    const analysisDate = "Oct 24, 2023";
-    const method = "Acoustic Analysis";
+    const analysisDate = new Date().toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
+    const method = "AI Acoustic Analysis";
 
     return (
         <SafeAreaView style={styles.container}>

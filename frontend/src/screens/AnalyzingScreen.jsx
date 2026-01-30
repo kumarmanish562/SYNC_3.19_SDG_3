@@ -5,14 +5,48 @@ import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 
-const AnalyzingScreen = ({ navigation }) => {
-    // Simulate analysis process then navigate to result (future step)
+import { analyzeCough } from '../services/api';
+
+const AnalyzingScreen = ({ route, navigation }) => {
+    const { audioUri } = route.params || {};
+
     useEffect(() => {
-        const timer = setTimeout(() => {
-            navigation.navigate('Result'); // Navigate to ResultScreen
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, []);
+        let isMounted = true;
+
+        const performAnalysis = async () => {
+            // Artificial delay for UX
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            if (!audioUri) {
+                // Testing fallback
+                navigation.replace('Result', { score: 55, status: 'Simulated' });
+                return;
+            }
+
+            try {
+                const result = await analyzeCough(audioUri);
+
+                if (isMounted) {
+                    if (result && result.success) {
+                        navigation.replace('Result', {
+                            score: result.data.score,
+                            status: result.data.status
+                        });
+                    } else {
+                        // Handle error or fallback
+                        navigation.replace('UploadError');
+                    }
+                }
+            } catch (error) {
+                console.error("Analysis Failed", error);
+                if (isMounted) navigation.replace('UploadError');
+            }
+        };
+
+        performAnalysis();
+
+        return () => { isMounted = false; };
+    }, [audioUri]);
 
     return (
         <SafeAreaView style={styles.container}>

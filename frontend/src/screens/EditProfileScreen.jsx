@@ -4,21 +4,75 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-const EditProfileScreen = ({ navigation }) => {
-    const [name, setName] = useState("Johnathan Doe");
-    const [email, setEmail] = useState("john.doe@healthmail.com");
-    const [dob, setDob] = useState("05/15/1990");
-    const [gender, setGender] = useState("Male");
+import { auth, db } from '../services/firebaseConfig';
+import { ref, update, onValue } from 'firebase/database';
+import { signOut } from 'firebase/auth';
 
-    const InputField = ({ label, value, onChangeText, icon, rightIcon }) => (
+const EditProfileScreen = ({ navigation }) => {
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [dob, setDob] = useState("");
+    const [gender, setGender] = useState("");
+    const [mobile, setMobile] = useState("");
+
+    // Load initial data
+    React.useEffect(() => {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+            const userRef = ref(db, 'users/' + currentUser.uid);
+            onValue(userRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    setName(data.username || currentUser.displayName || "");
+                    setEmail(data.email || currentUser.email || "");
+                    setDob(data.dob || "");
+                    setGender(data.gender || "");
+                    setMobile(data.mobile || "");
+                }
+            }, { onlyOnce: true });
+        }
+    }, []);
+
+    const handleSave = async () => {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+            try {
+                await update(ref(db, 'users/' + currentUser.uid), {
+                    username: name,
+                    dob: dob,
+                    mobile: mobile,
+                    gender: gender
+                    // Email usually requires re-auth to change in Firebase Auth
+                });
+                navigation.goBack();
+            } catch (error) {
+                console.error("Update failed", error);
+            }
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Auth' }],
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const InputField = ({ label, value, onChangeText, icon, rightIcon, editable = true }) => (
         <View style={styles.inputContainer}>
             <Text style={styles.label}>{label}</Text>
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, !editable && { backgroundColor: '#F5F5F5' }]}>
                 <TextInput
                     style={styles.input}
                     value={value}
                     onChangeText={onChangeText}
                     placeholder={`Enter ${label}`}
+                    editable={editable}
                 />
                 {(icon || rightIcon) && (
                     <Ionicons name={icon || rightIcon} size={20} color={colors.primary} />
@@ -64,10 +118,18 @@ const EditProfileScreen = ({ navigation }) => {
                     />
 
                     <InputField
-                        label="Email Address"
+                        label="Email Address (Cannot change)"
                         value={email}
                         onChangeText={setEmail}
                         rightIcon="mail"
+                        editable={false}
+                    />
+
+                    <InputField
+                        label="Mobile Number"
+                        value={mobile}
+                        onChangeText={setMobile}
+                        rightIcon="call"
                     />
 
                     <View style={styles.inputContainer}>
@@ -77,6 +139,7 @@ const EditProfileScreen = ({ navigation }) => {
                                 style={styles.input}
                                 value={dob}
                                 onChangeText={setDob}
+                                placeholder="MM/DD/YYYY"
                             />
                             <Ionicons name="calendar-outline" size={20} color={colors.primary} />
                         </View>
@@ -87,21 +150,21 @@ const EditProfileScreen = ({ navigation }) => {
                         <View style={styles.inputWrapper}>
                             <TextInput
                                 style={styles.input}
-                                value={gender}
-                                editable={false}
+                                value={gender} // Simplify to text input for speed
+                                onChangeText={setGender}
+                                placeholder="Male / Female"
                             />
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Ionicons name="chevron-down" size={20} color="#999" style={{ marginRight: 8 }} />
                                 <Ionicons name="people" size={20} color={colors.primary} />
                             </View>
                         </View>
                     </View>
 
-                    <TouchableOpacity style={styles.saveButton} onPress={() => navigation.goBack()}>
+                    <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                         <Text style={styles.saveButtonText}>Save Changes</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.logoutContainer}>
+                    <TouchableOpacity style={styles.logoutContainer} onPress={handleLogout}>
                         <Text style={styles.logoutText}>Logout from TB-SCAN</Text>
                     </TouchableOpacity>
 

@@ -1,4 +1,10 @@
 import React from 'react';
+import { LogBox } from 'react-native';
+
+// Suppress deprecated warning
+LogBox.ignoreLogs(['Expo AV has been deprecated']);
+LogBox.ignoreLogs(['Navigating to "Auth"']); // Ignore common nav warnings if any
+
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import HowItWorksScreen from '../screens/HowItWorksScreen';
@@ -19,12 +25,16 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
+import AuthScreen from '../screens/AuthScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import OtpVerificationScreen from '../screens/OtpVerificationScreen';
+
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
     return (
         <Stack.Navigator
-            initialRouteName="Welcome"
+            initialRouteName="Auth"
             screenOptions={{
                 headerShown: false,
                 contentStyle: { backgroundColor: '#FFFFFF' },
@@ -32,6 +42,9 @@ const AppNavigator = () => {
                 animation: 'slide_from_right'
             }}
         >
+            <Stack.Screen name="Auth" component={AuthScreen} />
+            <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
             <Stack.Screen name="Welcome" component={WelcomeScreen} />
             <Stack.Screen name="HowItWorks" component={HowItWorksScreen} />
             <Stack.Screen name="Privacy" component={PrivacyScreen} />
