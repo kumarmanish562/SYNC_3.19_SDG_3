@@ -23,6 +23,7 @@ const AuthScreen = ({ navigation }) => {
     // Sign Up specific state
     const [name, setName] = useState('');
     const [mobile, setMobile] = useState('');
+    const [countryCode, setCountryCode] = useState('+91');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -73,10 +74,14 @@ const AuthScreen = ({ navigation }) => {
                 await sendOtp(email);
 
                 // Navigate to OTP Screen
+                // Combine Country Code + Mobile for WhatsApp (remove + just in case)
+                const fullWhatsapp = (countryCode.replace('+', '') + mobile).replace(/\s/g, '');
+
                 navigation.navigate("OtpVerification", {
                     email,
                     password,
-                    mobile,
+                    mobile, // Keep original mobile for display/record
+                    whatsapp: fullWhatsapp, // New field for the bot
                     name,
                     isLogin: false // Always signup if we go here
                 });
@@ -181,13 +186,22 @@ const AuthScreen = ({ navigation }) => {
                             <>
                                 <Text style={styles.label}>{t('mobile_number')}</Text>
                                 <View style={styles.inputWrapper}>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="+1 234 567 8900"
-                                        value={mobile}
-                                        onChangeText={setMobile}
-                                        keyboardType="phone-pad"
-                                    />
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                        <TextInput
+                                            style={[styles.input, { maxWidth: 50, textAlign: 'center', borderRightWidth: 1, borderRightColor: '#EEE', marginRight: 10 }]}
+                                            placeholder="+91"
+                                            value={countryCode}
+                                            onChangeText={setCountryCode}
+                                            keyboardType="phone-pad"
+                                        />
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="1234567890"
+                                            value={mobile}
+                                            onChangeText={setMobile}
+                                            keyboardType="phone-pad"
+                                        />
+                                    </View>
                                     <Ionicons name="call-outline" size={20} color="#999" />
                                 </View>
                             </>
@@ -284,7 +298,7 @@ const AuthScreen = ({ navigation }) => {
                 <Text style={styles.copyrightText}>{t('copyright')}</Text>
 
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 

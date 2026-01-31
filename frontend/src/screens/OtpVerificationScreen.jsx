@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 const OtpVerificationScreen = ({ route, navigation }) => {
     // Get params passed from AuthScreen
-    const { email, password, name, mobile, isLogin } = route.params;
+    const { email, password, name, mobile, whatsapp, isLogin } = route.params;
     const { t } = useTranslation();
 
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -73,6 +73,7 @@ const OtpVerificationScreen = ({ route, navigation }) => {
                         username: name,
                         email: email,
                         mobile: mobile,
+                        whatsapp: whatsapp || mobile, // Bot linkage
                         gender: "Not set",
                         dob: "Not set",
                         createdAt: new Date().toISOString()

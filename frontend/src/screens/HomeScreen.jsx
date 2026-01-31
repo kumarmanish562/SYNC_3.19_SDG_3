@@ -134,15 +134,25 @@ const HomeScreen = ({ navigation }) => {
                         <Text style={styles.greetingText}>{t('hello')},</Text>
                         <Text style={styles.userNameText}>{userName}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                        <View style={styles.avatarContainer}>
-                            {/* Placeholder generic user image if no photoURL */}
-                            <Image
-                                source={{ uri: 'https://i.pravatar.cc/150?img=12' }}
-                                style={{ width: '100%', height: '100%' }}
-                            />
-                        </View>
-                    </TouchableOpacity>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+                        <TouchableOpacity
+                            style={styles.whatsappBtn}
+                            onPress={() => navigation.navigate('WhatsAppConnect')}
+                        >
+                            <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                            <View style={styles.avatarContainer}>
+                                {/* Placeholder generic user image if no photoURL */}
+                                <Image
+                                    source={{ uri: 'https://i.pravatar.cc/150?img=12' }}
+                                    style={{ width: '100%', height: '100%' }}
+                                />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Recent Activity Section */}
@@ -376,6 +386,21 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 3,
         elevation: 4,
+    },
+    whatsappBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#FFFFFF', // White background
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#EEEEEE',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
     },
 });
 

@@ -14,6 +14,7 @@ const EditProfileScreen = ({ navigation }) => {
     const [dob, setDob] = useState("");
     const [gender, setGender] = useState("");
     const [mobile, setMobile] = useState("");
+    const [whatsapp, setWhatsapp] = useState("");
 
     // Load initial data
     React.useEffect(() => {
@@ -28,6 +29,7 @@ const EditProfileScreen = ({ navigation }) => {
                     setDob(data.dob || "");
                     setGender(data.gender || "");
                     setMobile(data.mobile || "");
+                    setWhatsapp(data.whatsapp || "");
                 }
             }, { onlyOnce: true });
         }
@@ -41,6 +43,7 @@ const EditProfileScreen = ({ navigation }) => {
                     username: name,
                     dob: dob,
                     mobile: mobile,
+                    whatsapp: whatsapp,
                     gender: gender
                     // Email usually requires re-auth to change in Firebase Auth
                 });
@@ -130,6 +133,13 @@ const EditProfileScreen = ({ navigation }) => {
                         value={mobile}
                         onChangeText={setMobile}
                         rightIcon="call"
+                    />
+
+                    <InputField
+                        label="WhatsApp Number (with Country Code, e.g. 91987...)"
+                        value={whatsapp}
+                        onChangeText={setWhatsapp}
+                        rightIcon="logo-whatsapp"
                     />
 
                     <View style={styles.inputContainer}>

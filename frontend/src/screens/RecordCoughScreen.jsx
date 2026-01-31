@@ -69,19 +69,7 @@ const RecordCoughScreen = ({ navigation }) => {
                 playsInSilentModeIOS: true,
             });
 
-            const RECORDING_OPTIONS = {
-                android: Audio.RecordingOptionsPresets.HIGH_QUALITY,
-                ios: {
-                    extension: '.wav',
-                    audioQuality: Audio.IOSAudioQuality.HIGH,
-                    sampleRate: 16000,
-                    numberOfChannels: 1,
-                    bitRate: 128000,
-                    linearPCMBitDepth: 16,
-                    linearPCMIsBigEndian: false,
-                    linearPCMIsFloat: false,
-                },
-            };
+            const RECORDING_OPTIONS = Audio.RecordingOptionsPresets.HIGH_QUALITY;
 
             const { recording: newRecording } = await Audio.Recording.createAsync(RECORDING_OPTIONS);
 

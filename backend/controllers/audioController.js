@@ -88,7 +88,7 @@ exports.analyzeAudio = async (req, res) => {
                     else gMime = mimetype || 'audio/mpeg';
 
                     const result = await model.generateContent([
-                        "Act as a strict medical screening AI. \nYour task: Analyze the audio for Tuberculosis (TB) risk.\n\nSTEP 1: IDENTIFY SOUND\n- Silence/Noise/Talking -> INVALID\n- Cough -> VALID\n\nSTEP 2: CLASSIFY & SCORE (If Valid Cough)\n1. **Simple Cough** (Dry, clearing throat, brief, non-productive)\n   -> Score: 2-20 | Status: \"Low Risk\" | Type: \"Simple Cough\"\n\n2. **Productive Cough** (Loose, phlegmy, cold/flu symptoms)\n   -> Score: 30-60 | Status: \"Medium Risk\" | Type: \"Congested Cough\"\n\n3. **TB/Severe Cough** (Deep, hollow resonance, persistent rattling, 'wet' lung sounds)\n   -> Score: 75-99 | Status: \"High Risk\" | Type: \"Potential TB Signs\"\n\nReturn ONLY JSON:\n{ \"success\": true, \"score\": 0, \"status\": \"Invalid\", \"cough_type\": \"None\", \"probability\": 0.0, \"explanation\": \"...\" }",
+                        "Act as a strict medical screening AI. \nYour task: Analyze the audio for Tuberculosis (TB) risk.\n\nSTEP 1: IDENTIFY SOUND\n- Silence/Noise/Talking -> INVALID\n- Cough -> VALID\n\nIf the audio does NOT contain a clear cough, you MUST return status \"Invalid\".\n\nSTEP 2: CLASSIFY & SCORE (If Valid Cough)\n1. **Simple Cough** (Dry, clearing throat, brief, non-productive)\n   -> Score: 2-20 | Status: \"Low Risk\" | Type: \"Simple Cough\"\n\n2. **Productive Cough** (Loose, phlegmy, cold/flu symptoms)\n   -> Score: 30-60 | Status: \"Medium Risk\" | Type: \"Congested Cough\"\n\n3. **TB/Severe Cough** (Deep, hollow resonance, persistent rattling, 'wet' lung sounds)\n   -> Score: 75-99 | Status: \"High Risk\" | Type: \"Potential TB Signs\"\n\nReturn ONLY JSON:\n{ \"success\": true, \"score\": 0, \"status\": \"Invalid\", \"cough_type\": \"None\", \"probability\": 0.0, \"explanation\": \"...\" }",
                         {
                             inlineData: {
                                 data: audioBuffer.toString("base64"),
@@ -187,14 +187,23 @@ exports.analyzeAudio = async (req, res) => {
             }
 
             // 3. Aggregate Results
-            if (localRes?.success && geminiRes?.success) {
+            // Check for INVALID (Silence/Noise) from Gemini first
+            if (geminiRes?.status === "Invalid") {
+                aiResult = {
+                    score: 0,
+                    status: "Invalid Audio - No Cough Detected",
+                    probability: 0,
+                    coughType: "None",
+                    explanation: geminiRes.explanation || "No cough sound detected. Please record again specifically capturing a cough."
+                };
+            } else if (localRes?.success && geminiRes?.success) {
                 // Dual model ensemble (Balanced: 50% Local, 50% Gemini)
                 let weightedScore = (localRes.score * 0.5) + (geminiRes.score * 0.5);
 
                 aiResult = {
                     score: Math.round(weightedScore),
                     status: weightedScore >= 80 ? "High Risk" : (weightedScore >= 45 ? "Medium Risk" : "Low Risk"),
-                    probability: weightedScore / 100,
+                    probability: ((localRes.probability || 0.85) + (geminiRes.probability || 0.85)) / 2,
                     coughType: geminiRes.cough_type || localRes.cough_type,
                     explanation: `Ensemble analysis: Local Model (${localRes.score}%) & Cloud AI (${geminiRes.score}%)`
                 };

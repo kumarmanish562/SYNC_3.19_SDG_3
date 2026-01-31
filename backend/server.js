@@ -11,6 +11,9 @@ app.use(express.json());
 app.use("/api/audio", require("./routes/audioRoutes"));
 app.use("/api/auth", require("./routes/authRoutes")); // Placeholder for future auth
 
+// WhatsApp Direct Webhook (Easier config)
+app.post('/webhook', require('./controllers/whatsappController').handleWebhook);
+
 // Serve static files if needed or handling uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

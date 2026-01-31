@@ -23,9 +23,13 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 const { analyzeAudio, getHistory, testModel } = require("../controllers/audioController");
+const { handleWebhook } = require("../controllers/whatsappController");
 
 router.post("/analyze", upload.single("audio"), analyzeAudio);
 router.get("/history/:userId", getHistory);
 router.get("/test-model", testModel);
+
+// WhatsApp Webhook
+router.post("/webhook", handleWebhook);
 
 module.exports = router;
