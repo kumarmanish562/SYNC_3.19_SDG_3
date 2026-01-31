@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import * as ImagePicker from 'expo-image-picker';
 
-import { auth, db } from '../services/firebaseConfig';
+import { auth, db, storage } from '../services/firebaseConfig';
 import { ref, update, onValue } from 'firebase/database';
+import { ref as sRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signOut } from 'firebase/auth';
 
 const EditProfileScreen = ({ navigation }) => {
@@ -15,6 +17,8 @@ const EditProfileScreen = ({ navigation }) => {
     const [gender, setGender] = useState("");
     const [mobile, setMobile] = useState("");
     const [whatsapp, setWhatsapp] = useState("");
+    const [avatar, setAvatar] = useState(null);
+    const [uploading, setUploading] = useState(false);
 
     // Load initial data
     React.useEffect(() => {
@@ -30,10 +34,63 @@ const EditProfileScreen = ({ navigation }) => {
                     setGender(data.gender || "");
                     setMobile(data.mobile || "");
                     setWhatsapp(data.whatsapp || "");
+                    setAvatar(data.profilePicture || null);
                 }
             }, { onlyOnce: true });
         }
     }, []);
+
+    const handlePickImage = async () => {
+        // Request permissions
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+            Alert.alert("Permission Required", "You need to allow access to your photos to change your profile picture.");
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+        });
+
+        if (!result.canceled) {
+            uploadImage(result.assets[0].uri);
+        }
+    };
+
+    const uploadImage = async (uri) => {
+        setUploading(true);
+        try {
+            const response = await fetch(uri);
+            const blob = await response.blob();
+
+            const filename = `profile_${auth.currentUser.uid}_${Date.now()}`;
+            const storageRef = sRef(storage, `profiles/${filename}`);
+
+            await uploadBytes(storageRef, blob);
+            const downloadUrl = await getDownloadURL(storageRef);
+
+            setAvatar(downloadUrl);
+            // Optional: Save immediately or wait for "Save Changes"
+            // We wait for "Save Changes" to commit to DB, but UI shows new image.
+        } catch (error) {
+            console.error("Upload error: ", error);
+            Alert.alert("Upload Failed", "Could not upload image. Please try again.");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleBack = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            // Fallback if stack is empty (e.g. reload or direct link)
+            navigation.navigate('Home');
+        }
+    };
 
     const handleSave = async () => {
         const currentUser = auth.currentUser;
@@ -44,10 +101,10 @@ const EditProfileScreen = ({ navigation }) => {
                     dob: dob,
                     mobile: mobile,
                     whatsapp: whatsapp,
-                    gender: gender
-                    // Email usually requires re-auth to change in Firebase Auth
+                    gender: gender,
+                    profilePicture: avatar
                 });
-                navigation.goBack();
+                handleBack();
             } catch (error) {
                 console.error("Update failed", error);
             }
@@ -87,7 +144,7 @@ const EditProfileScreen = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={28} color={colors.primary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Edit Profile</Text>
@@ -101,15 +158,23 @@ const EditProfileScreen = ({ navigation }) => {
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={styles.avatarSection}>
                         <View style={styles.avatarWrapper}>
-                            <View style={styles.avatarCircle}>
-                                <Ionicons name="person" size={50} color="#FFF" />
+                            <View style={[styles.avatarCircle, { overflow: 'hidden' }]}>
+                                {uploading ? (
+                                    <ActivityIndicator size="large" color="#FFF" />
+                                ) : (
+                                    avatar ? (
+                                        <Image source={{ uri: avatar }} style={{ width: '100%', height: '100%' }} />
+                                    ) : (
+                                        <Ionicons name="person" size={50} color="#FFF" />
+                                    )
+                                )}
                             </View>
-                            <TouchableOpacity style={styles.cameraButton}>
+                            <TouchableOpacity style={styles.cameraButton} onPress={handlePickImage}>
                                 <Ionicons name="camera" size={16} color="#FFF" />
                             </TouchableOpacity>
                         </View>
-                        <TouchableOpacity>
-                            <Text style={styles.changePhotoText}>Change Photo</Text>
+                        <TouchableOpacity onPress={handlePickImage}>
+                            <Text style={styles.changePhotoText}>{uploading ? "Uploading..." : "Change Photo"}</Text>
                         </TouchableOpacity>
                     </View>
 

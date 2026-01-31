@@ -12,6 +12,7 @@ const { width } = Dimensions.get('window');
 const HomeScreen = ({ navigation }) => {
     const { t } = useTranslation();
     const [userName, setUserName] = useState('User');
+    const [profilePic, setProfilePic] = useState(null);
     const [recentActivity, setRecentActivity] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -20,8 +21,18 @@ const HomeScreen = ({ navigation }) => {
         if (currentUser) {
             setUserName(currentUser.displayName || currentUser.email.split('@')[0] || 'User');
 
+            // Listen to User Profile Changes (Name, Photo)
+            const userRef = ref(db, 'users/' + currentUser.uid);
+            const userUnsubscribe = onValue(userRef, (snapshot) => {
+                const userData = snapshot.val();
+                if (userData) {
+                    if (userData.username) setUserName(userData.username);
+                    if (userData.profilePicture) setProfilePic(userData.profilePicture);
+                }
+            });
+
             const reportsRef = ref(db, 'reports/' + currentUser.uid);
-            const unsubscribe = onValue(reportsRef, (snapshot) => {
+            const reportsUnsubscribe = onValue(reportsRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     const reports = Object.keys(data).map(key => ({
@@ -36,13 +47,16 @@ const HomeScreen = ({ navigation }) => {
                 setLoading(false);
             });
 
-            return () => unsubscribe();
+            return () => {
+                userUnsubscribe();
+                reportsUnsubscribe();
+            };
         } else {
             setUserName('Guest');
             setRecentActivity([]);
             setLoading(false);
         }
-    }, [t]); // Add t as dependency if language changes re-rendering needed, though usually automatic
+    }, [t]);
 
     const getRiskColor = (status) => {
         if (!status) return colors.primary;
@@ -145,9 +159,8 @@ const HomeScreen = ({ navigation }) => {
 
                         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                             <View style={styles.avatarContainer}>
-                                {/* Placeholder generic user image if no photoURL */}
                                 <Image
-                                    source={{ uri: 'https://i.pravatar.cc/150?img=12' }}
+                                    source={{ uri: profilePic || 'https://i.pravatar.cc/150?img=12' }}
                                     style={{ width: '100%', height: '100%' }}
                                 />
                             </View>

@@ -40,7 +40,7 @@ const ProfileScreen = ({ navigation }) => {
                         mobile: data.mobile || t('not_set'),
                         dob: data.dob || t('not_set'),
                         gender: data.gender || t('not_set'),
-                        avatar: data.avatar || null
+                        avatar: data.profilePicture || data.avatar || null
                     });
                 }
             });
@@ -102,8 +102,15 @@ const ProfileScreen = ({ navigation }) => {
 
                 {/* Profile Card */}
                 <View style={styles.profileHeader}>
-                    <View style={styles.avatarContainer}>
-                        <Ionicons name="person" size={48} color="#FFF" />
+                    <View style={[styles.avatarContainer, { overflow: 'hidden' }]}>
+                        {user.avatar ? (
+                            <Image
+                                source={{ uri: user.avatar }}
+                                style={{ width: '100%', height: '100%' }}
+                            />
+                        ) : (
+                            <Ionicons name="person" size={48} color="#FFF" />
+                        )}
                     </View>
                     <Text style={styles.userName}>{user.name}</Text>
                     <Text style={styles.userEmail}>{user.email}</Text>

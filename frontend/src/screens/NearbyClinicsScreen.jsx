@@ -190,7 +190,40 @@ const NearbyClinicsScreen = ({ navigation }) => {
         setClinics(newClinics);
     };
 
-    const filters = [t('filter_open'), t('filter_tb'), t('filter_rating'), t('filter_distance')];
+    const [activeFilter, setActiveFilter] = useState('Distance');
+
+    const filterOptions = [
+        { key: 'Open Now', label: t('filter_open') || "Open Now" },
+        { key: 'TB Scanning', label: t('filter_tb') || "TB Scanning" },
+        { key: 'Rating', label: t('filter_rating') || "Rating" },
+        { key: 'Distance', label: t('filter_distance') || "Distance" }
+    ];
+
+    const getFilteredClinics = () => {
+        let result = [...clinics];
+
+        switch (activeFilter) {
+            case 'Open Now':
+                return result.filter(c => c.status === 'status_open');
+            case 'TB Scanning':
+                // Filter for lung/pulmonary/hospital related
+                return result.filter(c =>
+                    c.name.toLowerCase().includes('pulmonary') ||
+                    c.name.toLowerCase().includes('lung') ||
+                    c.name.toLowerCase().includes('tb') ||
+                    c.name.toLowerCase().includes('respiratory') ||
+                    c.type === 'Hospital'
+                );
+            case 'Rating':
+                return result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            case 'Distance':
+            default:
+                // Default is usually already sorted by distance, but ensure it
+                return result.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+        }
+    };
+
+    const displayedClinics = getFilteredClinics();
 
     const openMaps = (lat, lng, label) => {
         const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
@@ -246,19 +279,20 @@ const NearbyClinicsScreen = ({ navigation }) => {
                     style={styles.filtersContainer}
                     contentContainerStyle={styles.filtersContent}
                 >
-                    {filters.map((filter, index) => (
+                    {filterOptions.map((filter, index) => (
                         <TouchableOpacity
                             key={index}
                             style={[
                                 styles.filterChip,
-                                index === 0 ? styles.activeFilter : styles.inactiveFilter
+                                activeFilter === filter.key ? styles.activeFilter : styles.inactiveFilter
                             ]}
+                            onPress={() => setActiveFilter(filter.key)}
                         >
                             <Text style={[
                                 styles.filterText,
-                                index === 0 ? styles.activeFilterText : styles.inactiveFilterText
+                                activeFilter === filter.key ? styles.activeFilterText : styles.inactiveFilterText
                             ]}>
-                                {filter}
+                                {filter.label}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -279,7 +313,7 @@ const NearbyClinicsScreen = ({ navigation }) => {
                             showsUserLocation={true}
                             showsMyLocationButton={true}
                         >
-                            {clinics.map(clinic => (
+                            {displayedClinics.map(clinic => (
                                 <Marker
                                     key={clinic.id}
                                     coordinate={clinic.coordinates}
@@ -303,7 +337,7 @@ const NearbyClinicsScreen = ({ navigation }) => {
 
                 {/* Clinics List */}
                 <View style={styles.clinicsList}>
-                    {clinics.map((clinic) => (
+                    {displayedClinics.map((clinic) => (
                         <View key={clinic.id} style={styles.clinicCard}>
                             {/* Card Header */}
                             <TouchableOpacity

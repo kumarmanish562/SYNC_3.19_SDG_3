@@ -15,6 +15,10 @@ const firebaseConfig = {
     appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
+import { getStorage } from 'firebase/storage';
+
+// ... existing imports ...
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
@@ -24,5 +28,6 @@ const auth = initializeAuth(app, {
 });
 
 const db = getDatabase(app);
+const storage = getStorage(app);
 
-export { auth, db };
+export { auth, db, storage };

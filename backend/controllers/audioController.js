@@ -88,7 +88,47 @@ exports.analyzeAudio = async (req, res) => {
                     else gMime = mimetype || 'audio/mpeg';
 
                     const result = await model.generateContent([
-                        "Act as a strict medical screening AI. \nYour task: Analyze the audio for Tuberculosis (TB) risk.\n\nSTEP 1: IDENTIFY SOUND\n- Silence/Noise/Talking -> INVALID\n- Cough -> VALID\n\nIf the audio does NOT contain a clear cough, you MUST return status \"Invalid\".\n\nSTEP 2: CLASSIFY & SCORE (If Valid Cough)\n1. **Simple Cough** (Dry, clearing throat, brief, non-productive)\n   -> Score: 2-20 | Status: \"Low Risk\" | Type: \"Simple Cough\"\n\n2. **Productive Cough** (Loose, phlegmy, cold/flu symptoms)\n   -> Score: 30-60 | Status: \"Medium Risk\" | Type: \"Congested Cough\"\n\n3. **TB/Severe Cough** (Deep, hollow resonance, persistent rattling, 'wet' lung sounds)\n   -> Score: 75-99 | Status: \"High Risk\" | Type: \"Potential TB Signs\"\n\nReturn ONLY JSON:\n{ \"success\": true, \"score\": 0, \"status\": \"Invalid\", \"cough_type\": \"None\", \"probability\": 0.0, \"explanation\": \"...\" }",
+                        `Act as a professional Clinical Acoustic Diagnostic AI specializing in respiratory pathology. 
+Your primary goal is to screen for Tuberculosis (TB) based on cough audio characteristics with high specificity (avoiding false alarms).
+
+---
+CRITICAL STEP 1: AUDIO VALIDATION (ZERO TOLERANCE)
+---
+Verify if the audio is a valid human cough. If it is speech, silence, background noise, or a generic "Plan Video", stop and return "Invalid".
+
+---
+CRITICAL STEP 2: PATHOLOGICAL ANALYSIS (TB FOCUS)
+---
+1. **Low Risk (Healthy/Forced Cough)**: 
+   - Characteristics: Dry, high-pitched, OR loud/powerful coughs that are "CLEAN". Powerful bass resonance from a healthy person is NOT pathological.
+   - Score: 10-35 | Status: "Low Risk"
+
+2. **Medium Risk (Bronchial/Congested)**: 
+   - Characteristics: Productive, wet sounds, mild rattling/phlegm, typical of common flu or cold.
+   - Score: 40-70 | Status: "Medium Risk"
+
+3. **High Risk (Potential TB/Pathological)**: 
+   - Characteristics: DISCREET pathological markers like severe wheezing/stridor, chronic barking, or hollow rattling originating from deep lung tissue.
+   - Score: 80-99 | Status: "High Risk"
+
+---
+RULE OF SANITY (IMPORTANT)
+---
+- A healthy person coughing forcefully often creates a loud, deep sound. Do NOT mistake this loudness or "room resonance" for pathological "hollow lung resonance".
+- High Risk MUST exhibit unmistakable wheezing or severe pathological chest rattling. If the cough is just loud and strong but clear, it is strictly LOW RISK.
+
+---
+RESPONSE FORMAT
+---
+Return ONLY JSON:
+{
+  "success": true,
+  "score": [Integer 0-99],
+  "status": "Invalid" | "Low Risk" | "Medium Risk" | "High Risk",
+  "cough_type": "None" | "Dry" | "Wet" | "Pathological",
+  "probability": [Float 0.0 to 1.0],
+  "explanation": "State clearly why it is not pathological even if loud."
+}`,
                         {
                             inlineData: {
                                 data: audioBuffer.toString("base64"),
@@ -169,61 +209,75 @@ exports.analyzeAudio = async (req, res) => {
             let geminiRes = null;
             const isWav = req.file.originalname.toLowerCase().endsWith('.wav');
 
-            // 1. Attempt Local Model
-            try {
-                // Always try local model; predict.py has internal fallbacks (SoundFile/Wave)
-                console.log(`Ensemble step 1: Running Local AI...`);
-                localRes = await runLocalModel(localFilePath);
-            } catch (e) {
-                console.warn("Local AI execution failed:", e.message);
+            // Execute AI Engines in Parallel for Speed
+            console.log("Starting Parallel Analysis: Local + Cloud AI...");
+            const [localOutcome, geminiOutcome] = await Promise.allSettled([
+                runLocalModel(localFilePath),
+                runGeminiModel(localFilePath, req.file.mimetype)
+            ]);
+
+            if (localOutcome.status === 'fulfilled') {
+                localRes = localOutcome.value;
+                console.log("Local AI finished.");
+            } else {
+                console.warn("Local AI execution failed:", localOutcome.reason);
             }
 
-            // 2. Attempt Gemini Model
-            try {
-                console.log(`Ensemble step 2: Running Gemini AI...`);
-                geminiRes = await runGeminiModel(localFilePath, req.file.mimetype);
-            } catch (e) {
-                console.error("Gemini AI execution failed:", e.message);
+            if (geminiOutcome.status === 'fulfilled') {
+                geminiRes = geminiOutcome.value;
+                console.log("Gemini AI finished.");
+            } else {
+                console.error("Gemini AI execution failed:", geminiOutcome.reason);
             }
 
-            // 3. Aggregate Results
-            // Check for INVALID (Silence/Noise) from Gemini first
-            if (geminiRes?.status === "Invalid") {
+            // 3. Aggregate Results (Hybrid Priority)
+            // User requested: "First analysis by model, Gemini only improvements"
+            const localConfidentDetected = localRes?.success && localRes.score > 15;
+            const geminiInvalid = geminiRes?.status === "Invalid";
+
+            // Logic: Trust Local Model for detection if it has a clear score, even if Gemini is too strict
+            if (geminiInvalid && !localConfidentDetected) {
+                console.log(`Validation Failed: Both models/Gemini agree it is not a valid cough.`);
                 aiResult = {
                     score: 0,
-                    status: "Invalid Audio - No Cough Detected",
+                    status: "Invalid Audio",
                     probability: 0,
                     coughType: "None",
-                    explanation: geminiRes.explanation || "No cough sound detected. Please record again specifically capturing a cough."
+                    explanation: geminiRes.explanation || "No distinct human cough detected. Please try again."
                 };
-            } else if (localRes?.success && geminiRes?.success) {
-                // Dual model ensemble (Balanced: 50% Local, 50% Gemini)
-                let weightedScore = (localRes.score * 0.5) + (geminiRes.score * 0.5);
+            } else if (localRes?.success) {
+                // PRIMARY: Trained Model (Local)
+                // IMPROVEMENT: Gemini Cloud (Detailing)
+                console.log("Using Hybrid Priority: Local Model First + Gemini Improvement.");
+
+                const geminiDetail = geminiRes?.success
+                    ? `\n\nAdvanced Assessment (Gemini AI): ${geminiRes.explanation}`
+                    : "";
 
                 aiResult = {
-                    score: Math.round(weightedScore),
-                    status: weightedScore >= 80 ? "High Risk" : (weightedScore >= 45 ? "Medium Risk" : "Low Risk"),
-                    probability: ((localRes.probability || 0.85) + (geminiRes.probability || 0.85)) / 2,
-                    coughType: geminiRes.cough_type || localRes.cough_type,
-                    explanation: `Ensemble analysis: Local Model (${localRes.score}%) & Cloud AI (${geminiRes.score}%)`
+                    score: localRes.score,
+                    status: localRes.status,
+                    probability: localRes.probability,
+                    coughType: geminiRes?.cough_type || localRes.cough_type || "Developing",
+                    explanation: `Clinical Screening (Trained Model): Analysis complete with ${localRes.score}% risk profile.${geminiDetail}`
                 };
             } else if (geminiRes?.success) {
-                // Only Gemini succeeded
+                // Gemini-only (Local failed)
                 aiResult = {
                     score: geminiRes.score,
                     status: geminiRes.status,
                     probability: geminiRes.probability,
                     coughType: geminiRes.cough_type,
-                    explanation: geminiRes.explanation + " (Cloud analysis exclusively)"
+                    explanation: geminiRes.explanation
                 };
             } else if (localRes?.success) {
-                // Only Local succeeded
+                // Secondary fallback
                 aiResult = {
                     score: localRes.score,
                     status: localRes.status,
                     probability: localRes.probability,
                     coughType: localRes.cough_type,
-                    explanation: "Analysis completed via on-device engine."
+                    explanation: "Local analysis complete. Cloud detailing unavailable."
                 };
             } else {
                 // Both Failed

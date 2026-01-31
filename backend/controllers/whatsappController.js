@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const FormData = require('form-data');
 const PDFDocument = require('pdfkit');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -11,6 +12,7 @@ const { db } = require('../config/firebase');
 
 const WHAPI_TOKEN = process.env.WHAPI_TOKEN;
 const WHAPI_URL = 'https://gate.whapi.cloud';
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, { apiVersion: "v1" });
 
 // Mapping: Sender ID (Phone) -> Internal User ID (from manual linking in app)
 // For now, we will store/retrieve this link from Firebase under 'users/{uid}/whatsapp'
@@ -88,7 +90,7 @@ async function processAudioAndReply(sender, userId, url, userName) {
     const wavPath = inputPath.replace('.ogg', '.wav');
 
     try {
-        // A. Download
+        // A. Download from Whapi
         const response = await axios.get(url, {
             responseType: 'stream',
             headers: { Authorization: `Bearer ${process.env.WHAPI_TOKEN}` }
@@ -101,7 +103,7 @@ async function processAudioAndReply(sender, userId, url, userName) {
             writer.on('error', reject);
         });
 
-        // B. Convert to WAV (16k Mono)
+        // B. Convert to WAV (16k Mono) for Local Model
         await new Promise((resolve, reject) => {
             ffmpeg(inputPath)
                 .toFormat('wav')
@@ -112,57 +114,95 @@ async function processAudioAndReply(sender, userId, url, userName) {
                 .save(wavPath);
         });
 
-        // C. Run Core AI Logic (Importing logic from audioController if possible, or spawning python)
-        // NOTE: We should ideally reuse the exact same Ensemble logic.
-        // For speed in this specific file, we will spawn the Python script directly, 
-        // BUT to get the "Ensemble" result we would need to replicate the Gemini call here or refactor audioController.
-        // Let's spawn local predict.py first for reliability.
+        // C. Hybrid AI Analysis (Local + Cloud)
+        console.log(`Starting Hybrid Analysis for WhatsApp User: ${userName}`);
 
-        const pythonCmd = process.platform === "win32" ? "python" : "python3";
-        const scriptPath = path.resolve(__dirname, "../../ai_model/predict.py");
+        // 1. Local Model Helper
+        const runLocalModel = (filePath) => {
+            return new Promise((resolve, reject) => {
+                const pythonCmd = process.platform === "win32" ? "python" : "python3";
+                const scriptPath = path.resolve(__dirname, "../../ai_model/predict.py");
+                const pythonProcess = spawn(pythonCmd, [scriptPath, filePath]);
+                let output = "";
+                pythonProcess.stdout.on("data", (d) => output += d.toString());
+                pythonProcess.on("close", (code) => {
+                    try {
+                        const jsonMatch = output.trim().match(/\{.*\}/s);
+                        if (!jsonMatch) throw new Error("No JSON");
+                        resolve(JSON.parse(jsonMatch[0]));
+                    } catch (e) { reject(e); }
+                });
+            });
+        };
 
-        const pythonProcess = spawn(pythonCmd, [scriptPath, wavPath]);
-        let output = "";
+        // 2. Gemini Cloud Helper
+        const runGeminiModel = async (filePath) => {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const audioBuffer = fs.readFileSync(filePath);
+            const result = await model.generateContent([
+                `Act as a professional Clinical Acoustic Diagnostic AI specializing in respiratory pathology. 
+Your primary goal is to screen for Tuberculosis (TB) based on cough audio characteristics with high specificity.
 
-        pythonProcess.stdout.on("data", (data) => output += data.toString());
+RESPONSE FORMAT (JSON ONLY):
+{
+  "success": true,
+  "score": [Integer 0-99],
+  "status": "Invalid" | "Low Risk" | "Medium Risk" | "High Risk",
+  "cough_type": "Dry" | "Wet" | "Pathological",
+  "probability": [Float],
+  "explanation": "Briefly state why it is or isn't pathological."
+}`,
+                { inlineData: { data: audioBuffer.toString("base64"), mimeType: "audio/wav" } }
+            ]);
+            const text = result.response.text();
+            const jsonMatch = text.match(/\{.*\}/s);
+            return JSON.parse(jsonMatch[0]);
+        };
 
-        pythonProcess.on("close", async (code) => {
-            // Parse Output
-            try {
-                const jsonMatch = output.trim().match(/\{.*\}/s);
-                let aiResult = {};
-                if (jsonMatch) {
-                    aiResult = JSON.parse(jsonMatch[0]);
-                } else {
-                    throw new Error("No JSON from AI");
-                }
+        // Execute in Parallel
+        const [localRes, geminiRes] = await Promise.all([
+            runLocalModel(wavPath).catch(e => ({ success: false, error: e.message })),
+            runGeminiModel(wavPath).catch(e => ({ success: false, error: e.message }))
+        ]);
 
-                // Generate PDF
-                const pdfPath = path.resolve(__dirname, `../uploads/Report_${userId}_${Date.now()}.pdf`);
-                await createPDF(pdfPath, aiResult, userId, userName);
+        // Hybrid Aggregation (Same as App)
+        let aiResult = {
+            score: localRes.success ? localRes.score : (geminiRes.score || 0),
+            status: localRes.success ? localRes.status : (geminiRes.status || "Unknown"),
+            probability: localRes.success ? localRes.probability : (geminiRes.probability || 0),
+            cough_type: geminiRes.cough_type || localRes.cough_type || "Developing",
+            explanation: `Clinical Screening (Trained Model): ${localRes.status}. \n\nAdvanced Refinement (Gemini AI): ${geminiRes.explanation}`
+        };
 
-                // Send PDF
-                await sendDocument(sender, pdfPath, "📄 Swass Health Report.pdf");
+        // D. Create & Send Report
+        const pdfPath = path.resolve(__dirname, `../uploads/SwaaS_Report_${Date.now()}.pdf`);
+        await createPDF(pdfPath, aiResult, userId, userName);
 
-                // High Risk Action
-                if (aiResult.score > 70) {
-                    await sendMessage(sender, "⚠️ High Risk Detected. We recommend visiting a clinic immediately.");
-                    // Interactive buttons code would go here
-                } else {
-                    await sendMessage(sender, `✅ Analysis Complete. Risk Score: ${aiResult.score}%. Detailed report attached.`);
-                }
+        await sendDocument(sender, pdfPath, "SwaaS_Analysis_Report.pdf");
 
-                // Cleanup
-                try { fs.unlinkSync(inputPath); fs.unlinkSync(wavPath); fs.unlinkSync(pdfPath); } catch (e) { }
+        // UI Feedback
+        if (aiResult.score > 70) {
+            await sendMessage(sender, "⚠️ HIGH RISK detected. Please consult a doctor immediately. I've attached your standard clinical report.");
+        } else {
+            await sendMessage(sender, `✅ Analysis Complete. Risk: ${aiResult.score}%. Your detailed report is attached below.`);
+        }
 
-            } catch (aiErr) {
-                await sendMessage(sender, "❌ Analysis failed. Please try recording again clearly.");
-            }
-        });
+        // E. Save to Firebase History (Link to app history)
+        try {
+            const reportRef = db.ref(`reports/${userId}`).push();
+            await reportRef.set({
+                ...aiResult,
+                timestamp: new Date().toISOString(),
+                source: "WhatsApp"
+            });
+        } catch (dbErr) { console.error("History save failed:", dbErr.message); }
+
+        // Cleanup
+        try { fs.unlinkSync(inputPath); fs.unlinkSync(wavPath); fs.unlinkSync(pdfPath); } catch (e) { }
 
     } catch (e) {
         console.error("Processing flow failed", e);
-        await sendMessage(sender, "Server error processing your file.");
+        await sendMessage(sender, "❌ Sorry, I encountered an error processing your audio. Please try again with a clearer recording.");
     }
 }
 
@@ -196,71 +236,89 @@ async function sendDocument(to, filePath, fileName) {
 
 function createPDF(filePath, data, userId, userName) {
     return new Promise((resolve) => {
-        const doc = new PDFDocument({ margin: 50 });
+        const doc = new PDFDocument({
+            size: 'A4',
+            margin: 50,
+            info: { Title: 'SwaaS Health Report', Author: 'SwaaS AI' }
+        });
         const stream = fs.createWriteStream(filePath);
         doc.pipe(stream);
 
-        // --- Header ---
-        doc.rect(0, 0, 612, 100).fill(data.score > 50 ? '#FFEBEE' : '#E8F5E9'); // Light background based on risk
+        // --- Professional Header ---
+        doc.rect(0, 0, 595.28, 70).fill('#1565C0'); // Deep Medical Blue
+        doc.fillColor('#FFFFFF');
+        doc.fontSize(22).font('Helvetica-Bold').text('SwaaS Health AI', 50, 25);
+        doc.fontSize(10).font('Helvetica').text('CONFIDENTIAL CLINICAL ASSESSMENT', 50, 48);
+        doc.fontSize(10).text(`Date: ${new Date().toLocaleDateString()}`, 400, 35, { align: 'right' });
+
+        // --- Metadata Section ---
+        doc.moveDown(4);
         doc.fillColor('#333333');
-        doc.fontSize(28).font('Helvetica-Bold').text('SwaaS', 50, 40, { align: 'left' });
-        doc.fontSize(10).font('Helvetica').text('AI-Powered Tuberculosis Screening', 50, 75);
+        doc.fontSize(11).font('Helvetica-Bold').text('PATIENT INFORMATION');
+        doc.rect(50, 105, 495, 1).fill('#E0E0E0');
 
-        doc.fontSize(12).text(new Date().toLocaleString(), 400, 45, { align: 'right' });
+        doc.font('Helvetica').fontSize(10);
+        doc.text('Name:', 50, 120);
+        doc.font('Helvetica-Bold').text(userName, 130, 120);
+        doc.font('Helvetica').text('Patient ID:', 50, 135);
+        doc.text(userId.slice(-8).toUpperCase(), 130, 135);
+        doc.text('Sample ID:', 300, 120);
+        doc.text(`AUDIO-${Date.now().toString().slice(-6)}`, 370, 120);
+
+        // --- Risk Summary Dashboard ---
         doc.moveDown(4);
+        const riskColor = data.score > 70 ? '#D32F2F' : (data.score > 40 ? '#F57C00' : '#2E7D32');
+        const riskLabel = data.status.toUpperCase();
 
-        // --- Patient Info ---
-        doc.font('Helvetica-Bold').fontSize(16).text('Analysis Report', 50, 130);
-        doc.rect(50, 150, 512, 2).fill('#E0E0E0');
+        doc.rect(50, 175, 495, 90).fill('#F8F9FA'); // Light Dashboard Bg
+        doc.rect(50, 175, 5, 90).fill(riskColor); // Intensity line
 
-        doc.font('Helvetica').fontSize(12).text(`Patient Name: ${userName}`, 50, 170);
-        doc.text(`User ID: ${userId}`, 50, 190);
-        doc.text(`Sample ID: ${Date.now()}`, 300, 190);
+        doc.fillColor('#666666').fontSize(9).font('Helvetica-Bold').text('ANALYSIS RESULT', 70, 185);
+        doc.fillColor(riskColor).fontSize(28).font('Helvetica-Bold').text(riskLabel, 70, 205);
+        doc.fillColor('#333333').fontSize(16).text(`${data.score}%`, 450, 205, { align: 'right', width: 80 });
+        doc.fontSize(9).font('Helvetica').text('Risk Propensity', 450, 225, { align: 'right', width: 80 });
 
-        // --- Risk Result Box ---
-        const boxColor = data.score > 70 ? '#D32F2F' : (data.score > 40 ? '#F57C00' : '#388E3C');
-        const boxBg = data.score > 70 ? '#FFCDD2' : (data.score > 40 ? '#FFCC80' : '#C8E6C9');
-
-        doc.rect(50, 230, 512, 100).fill(boxBg);
-        doc.fillColor(boxColor);
-        doc.fontSize(20).font('Helvetica-Bold').text(data.status.toUpperCase(), 0, 250, { align: 'center', width: 612 });
-
-        doc.fillColor('#000000');
-        doc.fontSize(14).font('Helvetica').text(`Risk Score: ${data.score}/100`, 0, 280, { align: 'center', width: 612 });
-
-        // --- Analysis Details ---
-        doc.moveDown(5);
-        doc.text('', 50, 360); // Reset position
-        doc.font('Helvetica-Bold').fontSize(14).text('Clinical Analysis');
-        doc.moveDown(1);
-
-        // Table-like structure
-        const drawRow = (label, value, y) => {
-            doc.font('Helvetica-Bold').text(label, 50, y);
-            doc.font('Helvetica').text(value, 200, y);
-        };
-
-        drawRow('Acoustic Classification:', data.cough_type || 'Unspecified', 390);
-        drawRow('AI Confidence:', `${Math.round((data.probability || 0) * 100)}% Match`, 415);
-        drawRow('Trend Analysis:', 'Single sample point', 440);
-
-        // --- Visual Confidence Bar ---
-        doc.rect(200, 418, 200, 8).fill('#EEEEEE'); // Track
-        doc.rect(200, 418, 200 * (data.probability || 0), 8).fill(boxColor); // Fill
-
-        // --- Explanation ---
+        // --- Clinical Breakdown ---
         doc.moveDown(4);
-        doc.fontSize(12).font('Helvetica-Bold').text('Interpretation');
-        doc.font('Helvetica').fontSize(11).text(data.explanation || "No specific details provided.", { align: 'justify', width: 500 });
+        doc.fontSize(11).font('Helvetica-Bold').text('CLINICAL FINDINGS', 50, 285);
+        doc.rect(50, 298, 495, 1).fill('#E0E0E0');
 
-        // --- Disclaimer ---
+        doc.fontSize(10).font('Helvetica-Bold').text('Cough Classification:', 50, 315);
+        doc.font('Helvetica').text(data.cough_type || 'Unspecified', 180, 315);
+        doc.font('Helvetica-Bold').text('AI Confidence:', 50, 335);
+        doc.font('Helvetica').text(`${Math.round((data.probability || 0) * 100)}% Match`, 180, 335);
+
+        // --- AI Interpretation ---
+        doc.moveDown(3);
+        doc.fontSize(11).font('Helvetica-Bold').text('AI INTERPRETATION & REASONING', 50, 375);
+        doc.rect(50, 390, 495, 120).stroke('#EEEEEE');
+        doc.font('Helvetica').fontSize(10).fillColor('#444444').text(data.explanation || "Primary acoustic analysis complete.", 65, 405, {
+            width: 465,
+            align: 'justify',
+            lineGap: 3
+        });
+
+        // --- Recommendations ---
         doc.moveDown(4);
-        doc.rect(50, 650, 512, 60).stroke('#999999');
-        doc.fontSize(9).fillColor('#666666')
-            .text('MEDICAL DISCLAIMER: This report is generated by an automated Artificial Intelligence system ' +
-                'and is NOT a medical diagnosis. The risk score indicates the similarity of your cough audio features ' +
-                'to known clinical patterns. Please consult a qualified healthcare professional for validation.',
-                60, 660, { width: 490, align: 'center' });
+        doc.fillColor('#333333').fontSize(11).font('Helvetica-Bold').text('NEXT STEPS & ADVICE', 50, 540);
+        doc.font('Helvetica').fontSize(10);
+        if (data.score > 70) {
+            doc.fillColor('#D32F2F').text('• URGENT: Seek medical consultation immediately.', 50, 560);
+            doc.text('• Consider chest X-ray and sputum tests as directed by a doctor.', 50, 575);
+        } else if (data.score > 35) {
+            doc.text('• Monitor respiratory symptoms for the next 72 hours.', 50, 560);
+            doc.text('• Re-test if symptoms (fever, night sweats) persist.', 50, 575);
+        } else {
+            doc.text('• Current profile is consistent with healthy respiratory patterns.', 50, 560);
+            doc.text('• General hygiene and hydration advised.', 50, 575);
+        }
+
+        // --- Footer & Disclaimer ---
+        doc.rect(0, 780, 595.28, 62).fill('#F5F5F5');
+        doc.fontSize(8).fillColor('#888888').font('Helvetica');
+        const disclaimer = "MEDICAL DISCLAIMER: This report is generated by an automated AI screening system and is NOT a definitive diagnosis. Acoustic signals are used to estimate risk based on clinical patterns. Final clinical decisions must be made by a licensed healthcare professional.";
+        doc.text(disclaimer, 50, 792, { align: 'center', width: 495 });
+        doc.text('© 2026 SwaaS Health AI - Standard Assessment Protocol', 0, 818, { align: 'center', width: 595 });
 
         doc.end();
         stream.on('finish', resolve);
