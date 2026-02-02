@@ -1,117 +1,107 @@
-# Swass - Smart Respiratory Health
+# SwaaS - AI-Powered Respiratory Health & TB Screening
 
-**Next-Generation Tuberculosis Screening & Respiratory Analysis System**
+**Next-Generation Intelligence for Tuberculosis Screening & Clinical Analysis**
+
+---
 
 ## 📖 Overview
 
-**Swass** is an advanced AI-powered mobile application designed to provide preliminary screening for Tuberculosis and other respiratory conditions. The system utilizes a novel **Ensemble AI Architecture**, combining on-device spectral analysis with Cloud-based Large Language Models (Gemini 1.5) to deliver highly accurate, real-time risk assessments.
+**SwaaS** (Smart Wellness & Acoustic Analysis System) is a state-of-the-art AI-powered platform designed for early detection and monitoring of Tuberculosis and chronic respiratory conditions. Utilizing a unique **Hybrid Priority AI Architecture**, the system cross-references local pre-trained pathological models with Cloud-based Large Language Models (Gemini 1.5) to deliver clinical-grade risk assessments in seconds.
 
 ## ✨ Key Features
 
-### 🧠 Ensemble AI Engine (Dual-Core Analysis)
-*   **Local Engine (Python/TensorFlow):** On-device spectral analysis using YamNet and custom classifiers to detect audio features.
-*   **Cloud Engine (Google Gemini 1.5):** Generative AI analysis for context-aware cough classification and noise filtering.
-*   **Balanced Scoring:** Findings from both engines are weighted (50/50) to produce a final, robust risk score.
+### 🧠 Hybrid Priority AI Engine (Dual-Core)
+*   **Primary Screening (Local Model):** Highly optimized TensorFlow model (`predict.py`) that analyzes spectral audio features and YAMNet embeddings to provide a calibrated risk score.
+*   **Advanced Refinement (Gemini 1.5):** Cloud-based AI provides deep clinical interpretation, detecting subtle pathological markers like stridor, wheezing, and hollow resonance.
+*   **Zero-Tolerance Validation:** Intelligent noise-filtering that distinguishes human coughs from background interference, speech, or silence.
 
-### 🔬 Advanced Classification Categories
-The system strictly categorizes audio inputs to avoid false positives:
-*   **0% - Invalid:** Silence, background noise, or talking (No cough detected).
-*   **2-20% - Low Risk:** Simple, dry, or tickle coughs (Normal/Allergy).
-*   **30-60% - Medium Risk:** Productive, wet, or congested coughs (Cold/Flu).
-*   **75-99% - High Risk:** Deep, hollow resonance, rattling, or persistent wheezing (Potential TB Signs).
+### 💬 WhatsApp Healthcare Bot
+*   **Audio-to-Report:** Send a cough voice note directly to the SwaaS WhatsApp bot.
+*   **Automated Analysis:** Real-time processing using the same Hybrid AI engine.
+*   **Clinical PDF Delivery:** Receive a professional, standardized medical report (PDF) directly in the chat.
+*   **Cloud Sync:** WhatsApp analyses are automatically synced to your SwaaS mobile app history.
 
-### 📱 User-Centric Mobile Experience
-*   **Smart Recording:** Integrated audio recorder with real-time waveform visualization.
-*   **Instant Results:** Analysis is performed in seconds, with immediate visual feedback.
-*   **Real-time History:** Past reports are automatically synced and updated across devices.
-*   **Health Insights:** AI-generated trend suggestions based on historical data.
+### 📄 Professional Clinical Reports
+*   **standardized PDF Format:** Automated generation of detailed assessment reports.
+*   **Risk Dashboard:** Color-coded intensity indicators (Low/Medium/High).
+*   **Actionable Advice:** Medical recommendations based on World Health Organization (WHO) screening protocols.
 
-### 🔐 Security & Management
-*   **Secure Auth:** Firebase Authentication with OTP verification.
-*   **Privacy:** Audio is processed securely and deleted from local storage post-analysis.
-*   **Profile Dashboard:** View aggregate health stats and manage personal information.
+### 📱 Premium Mobile Experience
+*   **Interactive Dashboard:** 14-day trend analysis and historical health tracking.
+*   **Clinic Locator:** Interactive maps to find nearby respiratory clinics and hospitals.
+*   **Secure Authentication:** Firebase-powered login with OTP verification for data privacy.
 
 ---
 
 ## 🛠 Technology Stack
 
-### Frontend (Mobile)
+### Frontend (User Interface)
 *   **Framework:** React Native (Expo SDK 50+)
-*   **Language:** JavaScript (ES6+)
-*   **Navigation:** React Navigation (Stack, Bottom Tabs)
-*   **State Analysis:** Live Waveform Visualization
-*   **Styling:** Custom component system
+*   **Mapping:** React Native Maps with dynamic clinic discovery.
+*   **Visuals:** Real-time audio waveform visualization.
 
 ### Backend (Intelligent Core)
-*   **Runtime:** Node.js & Express
-*   **AI Integration:**
-    *   **Python Subsystem:** `librosa`, `tensorflow`, `numpy`, `soundfile` for spectral processing.
-    *   **Cloud API:** Google Gemini 1.5 Flash for generative audio analysis.
-*   **Database:** Firebase Realtime Database
-*   **Storage:** Firebase Cloud Storage
-*   **Process Management:** `child_process` spawning for seamless Python-Node interoperability.
+*   **Runtime:** Node.js & Express.
+*   **AI Stack:** 
+    *   **Python:** TensorFlow, YAMNet, Librosa, Scipy.
+    *   **Cloud:** Google Gemini 1.5 Flash (Generative AI).
+*   **Integrations:** 
+    *   **WhatsApp:** Whapi.cloud API for bot interactions.
+    *   **Documentation:** PDFKit for clinical report generation.
+*   **Database:** Firebase Realtime Database & Cloud Storage.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation & Setup
 
-### Prerequisites
-*   Node.js (v18+)
-*   Python 3.10+ (with pip)
-*   Expo Go app (Android/iOS)
-
-### 1. Backend Setup
-
-Navigate to the backend directory:
+### 1. Backend Configuration
+Navigate to `/backend`:
 ```bash
-cd backend
 npm install
 ```
 
-**Python Dependencies:**
-Ensure you have Python installed, then install the required AI libraries:
+**Environment Setup (`.env`):**
+```env
+PORT=5000
+# Firebase Configuration
+FIREBASE_DATABASE_URL=https://your-project.firebaseio.com
+FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
+
+# AI APIs
+GEMINI_API_KEY=your_gemini_key
+
+# WhatsApp Bot
+WHAPI_TOKEN=your_whapi_token
+```
+
+**Python AI Environment:**
 ```bash
 pip install librosa tensorflow tensorflow_hub numpy soundfile joblib scipy
 ```
 
-**Environment Configuration:**
-Create a `.env` file in `backend/`:
-```env
-PORT=5000
-GEMINI_API_KEY=your_google_ai_key
-# Firebase Admin SDK credentials (serviceAccountKey.json) must be present in root
-```
-
-**Start the Server:**
+### 2. Frontend Configuration
+Navigate to `/frontend`:
 ```bash
-node server.js
-```
-The server will initialize `Firebase Admin`, check for the Python environment, and listen on `0.0.0.0:5000`.
-
-### 2. Frontend Setup
-
-Open a new terminal, navigate to the frontend:
-```bash
-cd frontend
 npm install
 ```
 
-**API Configuration:**
-Update `src/services/api.js` with your machine's local IP address:
-```javascript
-export const API_BASE_URL = 'http://<YOUR_IP_ADDRESS>:5000/api';
+**Environment Setup (`.env`):**
+```env
+EXPO_PUBLIC_API_URL=http://<YOUR_LOCAL_IP>:5000/api
+EXPO_PUBLIC_FIREBASE_API_KEY=your_key
+...
 ```
 
-**Launch App:**
+**Run Locally:**
 ```bash
-npx expo start --clear
+npx expo start
 ```
-Scan the QR code with **Expo Go**.
 
 ---
 
 ## ⚠️ Medical Disclaimer
-This application is a **screening, research, and educational tool**. It does **NOT** provide a definitive medical diagnosis. The "High Risk" status is an indicator to seek professional medical advice. Always consult with a qualified healthcare provider for testing and treatment.
+This platform is a **screening and educational tool**. It is **NOT** a substitute for professional medical diagnosis. The AI's findings provide a risk propensity based on acoustic patterns and should always be validated by a licensed physician through clinical tests (Sputum, X-Ray, etc.).
 
 ---
-*Developed by Primanex Solutions for SYNC CIH 3.0*
+*Developed by Primanex Solutions - SYNC CIH 3.0*
